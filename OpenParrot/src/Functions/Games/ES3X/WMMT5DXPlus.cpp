@@ -1187,9 +1187,9 @@ static int loadMileData(char* filepath)
 
 			// Copy the mile data from the file into the memory location
 			memcpy((void*)(mileMemory + 0x280), mileDatadxp + 0x00, 0x04);
-
-			fclose(miles);
 		}
+		// Close the miles file
+		fclose(miles);
 	}
 
 	// Success

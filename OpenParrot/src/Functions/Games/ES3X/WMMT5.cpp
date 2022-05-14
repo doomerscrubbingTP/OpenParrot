@@ -430,9 +430,6 @@ unsigned int WINAPI Hook_bind(SOCKET s, const sockaddr *addr, int namelen) {
 	}
 }
 
-// Save data dump memory block
-unsigned char saveData[0x2000];
-
 // BASE: 0x24E0 
 // Campaing honor data: 2998, save 0xB8
 // Story Mode Honor data: 25F0, save 0x98
@@ -506,6 +503,32 @@ unsigned char saveData[0x2000];
 //	fclose(file);
 //	return 1;
 //}
+
+// Save data dump memory block
+unsigned char saveData[0x2000];
+
+// Sets if saving is allowed or not
+static bool saveOk = false;
+
+// If custom car is used
+bool customCar = false;
+
+// Sets if loading is allowed
+bool loadOk = false;
+
+// Car save data reserved memory
+unsigned char carData[0xFF];
+
+// Car filename string
+char carFileName[0xFF];
+
+// SaveOk(void): Void
+// Enables saving
+static int SaveOk()
+{
+	saveOk = true;
+	return 1;
+}
 
 // setFullTune(void): Int
 // If the currently loaded car is NOT fully tuned, 
@@ -620,29 +643,6 @@ static int writeDump(char* filename, unsigned char* data, size_t size)
 		// Return failure status
 		return 1;
 	}
-}
-
-// Sets if saving is allowed or not
-static bool saveOk = false;
-
-// If custom car is used
-bool customCar = false;
-
-// Sets if loading is allowed
-bool loadOk = false;
-
-// Car save data reserved memory
-unsigned char carData[0xFF];
-
-// Car filename string
-char carFileName[0xFF];
-
-// SaveOk(void): Void
-// Enables saving
-static int SaveOk()
-{
-	saveOk = true;
-	return 1;
 }
 
 // loadCarFile(filename: char*): Int
