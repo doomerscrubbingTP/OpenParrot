@@ -1390,8 +1390,8 @@ static int loadGameData()
 	// Load the miles save file
 	loadMileData(loadPath);
 
-	// Sleep for 14 seconds
-	std::this_thread::sleep_for(std::chrono::seconds(14));
+	// Sleep for 30 seconds (Thanks Chery!)
+	std::this_thread::sleep_for(std::chrono::seconds(30));
 
 	// Load the stars save file
 	loadStarData(loadPath);
