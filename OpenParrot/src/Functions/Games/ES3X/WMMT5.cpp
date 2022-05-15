@@ -510,6 +510,9 @@ unsigned char saveData[0x2000];
 // Mile data dump memory block
 unsigned char mileData[0x08];
 
+// Star data dump memory block
+unsigned char starData[0x40];
+
 // Car save data reserved memory
 unsigned char carData[0xFF];
 
@@ -648,22 +651,49 @@ static int writeDump(char* filename, unsigned char* data, size_t size)
 	}
 }
 
+// dumpMemory(filename: char*, memory: uintptr_t, size: size_t): Void
+static int dumpMemory(char* filename, uintptr_t memory, size_t size)
+{
+	// Create the array to dump the memory data to
+	unsigned char* data = (unsigned char*)malloc(size);
+
+	// If malloc is successful
+	if (data)
+	{
+		// Set all of the pointer data to zero
+		memset(data, 0, size);
+
+		// Copy the memory from the source
+		memcpy(data, (void*)memory, size);
+
+		// Write the memory to a file
+		writeDump(filename, data, size);
+
+		// Free the allocated memory
+		free(data);
+
+		// Success
+		return 1;
+	}
+
+	// Failure
+	return 0;
+}
+
 static int dumpPointers()
 {
-	// Get the pointer location from the game
-	uintptr_t pointers = *(uintptr_t*)(imageBase + 0x1948F10);
+	dumpMemory("pointers_new.bin", (uintptr_t)(*(uintptr_t*)(imageBase + 0x1948F10)), 0x2000);
+	
+	return 1; // Success
+}
 
-	unsigned char pointerData[0x2000];
-	memset(pointerData, 0, 0x2000);
-	memcpy(pointerData, (void*)pointers, 0x2000);
-	writeDump("pointers.bin", pointerData, sizeof(pointerData));
+static int dumpStarMemory()
+{
+	// Star memory address pointer
+	uintptr_t stars = *(uintptr_t*)((*(uintptr_t*)(imageBase + 0x1948F10)) + 0x110);
 
-	// auto mileageLocation = *(uintptr_t*)(*(uintptr_t*)(imageBase + 0x1948F10) + 0x250);
-
-	// unsigned char mileageData[0x10];
-	// memset(mileageData, 0, 0x10);
-	// memcpy(mileageData, (void*)mileageLocation, 0x10);
-	// writeDump("mileage.bin", mileageData, sizeof(mileageData));
+	// Dump 2000 bytes from the stars region
+	dumpMemory("stars_memory.bin", stars, 0x2000);
 
 	return 1; // Success
 }
@@ -736,9 +766,6 @@ static int loadCarFile(char* filename)
 // car file) from that folder.
 static int loadCarData(char* filepath)
 {
-	// Sleep for 1 second
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
 	// Custom car disabled by default
 	customCar = false;
 
@@ -1044,6 +1071,91 @@ static int saveMileData(char* filepath)
 	return 1;
 }
 
+// Credits to chery vtec tuning club for figuring out star loading / saving
+static int saveStarData(char* filepath)
+{
+	// Star path saving
+	char starPath[0xFF];
+
+	// Set the storyPath memory to zero
+	memset(starPath, 0, 0xFF);
+
+	// Copy the file path to the stars path
+	strcpy(starPath, filepath);
+
+	// Append the mileage filename to the string
+	strcat(starPath, "\\stars.bin");
+
+	// Clear star data memory
+	memset(starData, 0, 0x40);
+
+	// Save Star Data
+
+	// Dereference the star pointer
+	uintptr_t starBase = *(uintptr_t*)((*(uintptr_t*)(imageBase + 0x1948F10)) + 0x110);
+
+	// Dumps first 2 bytes from star pointer
+	memcpy(starData + 0x00, (void*)(starBase + 0x27C), 0x4);
+
+	// Dumps medal offsets from star pointer, 16 bytes
+	memcpy(starData + 0x04, (void*)(starBase + 0x288), 0x10);
+
+	// Success
+	return 1;
+}
+
+static int loadStarData(char* filepath)
+{
+	// Star path loading
+	char starPath[0xFF];
+
+	// Set the storyPath memory to zero
+	memset(starPath, 0, 0xFF);
+
+	// Copy the file path to the stars path
+	strcpy(starPath, filepath);
+
+	// Append the mileage filename to the string
+	strcat(starPath, "\\stars.bin");
+
+	// Clear star data memory
+	memset(starData, 0, 0x40);
+
+	// Open the star binary file
+	FILE* starFile = fopen(starPath, "rb");
+
+	// If the file opened successfully
+	if (starFile)
+	{
+		// If the file size is correct
+		fseek(starFile, 0, SEEK_END);
+		int starSize = ftell(starFile);
+		if (starSize == 0x40)
+		{
+			// Reset the file pointer to the start
+			fseek(starFile, 0, SEEK_SET);
+
+			// Read all of the contents into the array
+			fread(starData, starSize, 1, starFile);
+
+			// Dereference the star pointer in the game memory
+			uintptr_t starBase = *(uintptr_t*)((*(uintptr_t*)(imageBase + 0x1948F10)) + 0x110);
+
+			// Dumps first 2 bytes from star pointer
+			memcpy((void*)(starBase + 0x27C), starData + 0x00, 0x4);
+
+			// Dumps medal offsets from star pointer, 16 bytes
+			memcpy((void*)(starBase + 0x288), starData + 0x04, 0x10);
+
+			// Close the stars file
+			fclose(starFile);
+		}
+	}
+
+	// Success
+	return 1;
+}
+
 static int SaveGameData()
 {
 	// Saving is disabled
@@ -1106,6 +1218,9 @@ static int SaveGameData()
 	// Save the openprogress.sav file
 	saveStoryData(savePath);
 
+	// Load the miles save file
+	saveStarData(savePath);
+
 	// Disable saving
 	saveOk = false;
 
@@ -1165,17 +1280,23 @@ static int loadGameData()
 	// Ensure the directory exists
 	std::filesystem::create_directories(loadPath);
 
-	// Debug stuff (Dumping pointers)
-	// dumpPointers();
+	// Sleep for 1 second
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 
 	// Load the car save file
 	loadCarData(loadPath);
 
+	// Load the openprogress.sav file
+	loadStoryData(loadPath);
+
 	// Load the miles save file
 	loadMileData(loadPath);
 
-	// Load the openprogress.sav file
-	loadStoryData(loadPath);
+	// Sleep for 30 seconds (Thanks Chery!)
+	std::this_thread::sleep_for(std::chrono::seconds(30));
+
+	// Load the stars save file
+	loadStarData(loadPath);
 
 	// Success
 	return 1;

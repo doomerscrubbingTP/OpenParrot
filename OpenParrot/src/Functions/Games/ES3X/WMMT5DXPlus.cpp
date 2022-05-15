@@ -577,6 +577,53 @@ static int writeDump(char * filename, unsigned char * data, size_t size)
 	}
 }
 
+// dumpMemory(filename: char*, memory: uintptr_t, size: size_t): Void
+static int dumpMemory(char* filename, uintptr_t memory, size_t size)
+{
+	// Create the array to dump the memory data to
+	unsigned char* data = (unsigned char*)malloc(size);
+
+	// If malloc is successful
+	if (data)
+	{
+		// Set all of the pointer data to zero
+		memset(data, 0, size);
+
+		// Copy the memory from the source
+		memcpy(data, (void*)memory, size);
+
+		// Write the memory to a file
+		writeDump(filename, data, size);
+
+		// Free the allocated memory
+		free(data);
+
+		// Success
+		return 1;
+	}
+
+	// Failure
+	return 0;
+}
+
+static int dumpPointers()
+{
+	dumpMemory("pointers_new.bin", (uintptr_t)(*(uintptr_t*)(imageBasedxplus + 0x1F7D578)), 0x2000);
+
+	return 1; // Success
+}
+
+static int dumpStarMemory()
+{
+	// Star memory address pointer
+	uintptr_t stars = *(uintptr_t*)((*(uintptr_t*)(imageBasedxplus + 0x1F7D578)) + 0x110);
+
+	// Dump 2000 bytes from the stars region
+	dumpMemory("stars_memory.bin", stars, 0x2000);
+
+	return 1; // Success
+}
+
 // Sets if saving is allowed or not
 static bool saveOk = false;
 
@@ -1249,7 +1296,7 @@ static int saveStarData(char* filepath)
 	uintptr_t starBase = *(uintptr_t*)((*(uintptr_t*)(imageBasedxplus + 0x1F7D578)) + 0x110);
 
 	// Dumps first 2 bytes from star pointer
-	memcpy(starDataDxp + 0x00, (void*)(starBase + 0x248), 0x2);
+	memcpy(starDataDxp + 0x00, (void*)(starBase + 0x248), 0x4);
 
 	// Dumps medal offsets from star pointer, 16 bytes
 	memcpy(starDataDxp + 0x04, (void*)(starBase + 0x254), 0x10);
@@ -1281,15 +1328,9 @@ static int loadStarData(char* filepath)
 	// Open the star binary file
 	FILE* starFile = fopen(starPath, "rb");
 
-	// saveStarData(".\\preloadstars");
-	writeLog(logfileDxp, "Loading stars ...\n");
-
 	// If the file opened successfully
 	if (starFile)
 	{
-		// saveStarData(".\\preloadstars");
-		writeLog(logfileDxp, "success.\n");
-
 		// If the file size is correct
 		fseek(starFile, 0, SEEK_END);
 		int starSize = ftell(starFile);
@@ -1305,7 +1346,7 @@ static int loadStarData(char* filepath)
 			uintptr_t starBase = *(uintptr_t*)((*(uintptr_t*)(imageBasedxplus + 0x1F7D578)) + 0x110);
 
 			// Dumps first 2 bytes from star pointer
-			memcpy((void*)(starBase + 0x248), starDataDxp + 0x00, 0x2);
+			memcpy((void*)(starBase + 0x248), starDataDxp + 0x00, 0x4);
 
 			// Dumps medal offsets from star pointer, 16 bytes
 			memcpy((void*)(starBase + 0x254), starDataDxp + 0x04, 0x10);
@@ -1972,8 +2013,6 @@ static InitFunction Wmmt5Func([]()
 		injector::WriteMemory<WORD>(imageBasedxplus + 0x376F80 + 4, 0x90C0, true);
 
 		// Prevents startup saving
-		// injector::MakeNOP(imageBase + 0x6B908C, 0x0D);
-		// safeJMP(imageBase + 0x6B908C, SaveOk);
 		injector::WriteMemory<WORD>(imageBasedxplus + 0x6B909A, 0xB848, true);
 		injector::WriteMemory<uintptr_t>(imageBasedxplus + 0x6B909A + 2, (uintptr_t)SaveOk, true);
 		injector::WriteMemory<DWORD>(imageBasedxplus + 0x6B90A4, 0x9090D0FF, true);

@@ -1185,6 +1185,8 @@ static InitFunction Wmmt6Func([]()
 	}
 	else
 	{
+		// Comment these out to disable terminal bypass
+
 		injector::WriteMemory<WORD>(imageBase + 0x6A0C87, 0x00D1, true);		
 		injector::WriteMemory<BYTE>(imageBase + 0x20B88A, 0x90, true);
 		injector::WriteMemory<BYTE>(imageBase + 0x20B88B, 0x90, true);
@@ -1445,25 +1447,25 @@ static InitFunction Wmmt6Func([]()
 	// Save story stuff (only 05)
 	{
 		// skip erasing of temp card data
-		injector::WriteMemory<uint8_t>(imageBase + 0xA54F13, 0xEB, true);
+		// injector::WriteMemory<uint8_t>(imageBase + 0xA54F13, 0xEB, true);
+		
 		// Skip erasing of temp card
-		// safeJMP(imageBase + 0x647FB0, LoadGameData);
-		safeJMP(imageBase + 0x65ED40, ReturnTrue);
-		safeJMP(imageBase + 0x682A00, ReturnTrue);
-		safeJMP(imageBase + 0x68CD40, ReturnTrue);
+		// safeJMP(imageBase + 0x65ED40, ReturnTrue);
+		// safeJMP(imageBase + 0x682A00, ReturnTrue);
+		// safeJMP(imageBase + 0x68CD40, ReturnTrue);
 
-		safeJMP(imageBase + 0xACEA10, ReturnTrue);
-		safeJMP(imageBase + 0x65F1F0, ReturnTrue);
-		safeJMP(imageBase + 0x6856F0, ReturnTrue);
+		// safeJMP(imageBase + 0xACEA10, ReturnTrue);
+		// safeJMP(imageBase + 0x65F1F0, ReturnTrue);
+		// safeJMP(imageBase + 0x6856F0, ReturnTrue);
 
 		// Skip more
-		safeJMP(imageBase + 0x641950, ReturnTrue);
-		safeJMP(imageBase + 0xACDCE0, ReturnTrue);
-		safeJMP(imageBase + 0x6B7030, ReturnTrue);
-		safeJMP(imageBase + 0x6C73D0, ReturnTrue);
-		safeJMP(imageBase + 0xA85F20, ReturnTrue);
-		safeJMP(imageBase + 0x64F600, ReturnTrue);
-		safeJMP(imageBase + 0x61BD00, ReturnTrue);
+		// safeJMP(imageBase + 0x641950, ReturnTrue);
+		// safeJMP(imageBase + 0xACDCE0, ReturnTrue);
+		// safeJMP(imageBase + 0x6B7030, ReturnTrue);
+		// safeJMP(imageBase + 0x6C73D0, ReturnTrue);
+		// safeJMP(imageBase + 0xA85F20, ReturnTrue);
+		// safeJMP(imageBase + 0x64F600, ReturnTrue);
+		// safeJMP(imageBase + 0x61BD00, ReturnTrue);
 
 		// safeJMP(imageBase + 0x6C8818, LoadWmmt5CarData);
 
