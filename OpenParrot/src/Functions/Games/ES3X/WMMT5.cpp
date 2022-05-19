@@ -430,80 +430,6 @@ unsigned int WINAPI Hook_bind(SOCKET s, const sockaddr *addr, int namelen) {
 	}
 }
 
-// BASE: 0x24E0 
-// Campaing honor data: 2998, save 0xB8
-// Story Mode Honor data: 25F0, save 0x98
-// StoryModeNoLoseHonorData: 2C80, Copy 0,0x10, Copy 0x18,0x28 maybe 8 bytes more
-// OtherHonorData: 2A90, Copy 0x60
-// CampaignHonorData: 2698, Copy 0x48
-
-//static int SaveCampaingHonorData2()
-//{
-//	memset(saveData, 0, 0x1000);
-//	uintptr_t imageBase = (uintptr_t)GetModuleHandleA(0);
-//	uintptr_t value = *(uintptr_t*)(imageBase + 0x1948F10);
-//	value += 0x2698;
-//	FILE* file = fopen(V("CampaignHonorData.sav"), V("wb"));
-//	memcpy(saveData, (void *)value, 0x48);
-//	fwrite(saveData, 1, 0x100, file);
-//	fclose(file);
-//	return 1;
-//}
-//
-//static int SaveOtherHonorData()
-//{
-//	memset(saveData, 0, 0x1000);
-//	uintptr_t imageBase = (uintptr_t)GetModuleHandleA(0);
-//	uintptr_t value = *(uintptr_t*)(imageBase + 0x1948F10);
-//	value += 0x2A90;
-//	FILE* file = fopen(V("OtherHonorData.sav"), V("wb"));
-//	memcpy(saveData, (void *)value, 0x60);
-//	fwrite(saveData, 1, 0x100, file);
-//	fclose(file);
-//	return 1;
-//}
-//
-//static int SaveStoryModeNoLoseHonorData()
-//{
-//	memset(saveData, 0, 0x1000);
-//	uintptr_t imageBase = (uintptr_t)GetModuleHandleA(0);
-//	uintptr_t value = *(uintptr_t*)(imageBase + 0x1948F10);
-//	value += 0x2C80;
-//	FILE* file = fopen(V("StoryModeNoLoseHonorData.sav"), V("wb"));
-//	memcpy(saveData, (void *)value, 0x10);
-//	value += 0x18;
-//	memcpy(saveData, (void *)value, 0x28);
-//	fwrite(saveData, 1, 0x100, file);
-//	fclose(file);
-//	return 1;
-//}
-//
-//static int SaveCampaingHonorData()
-//{
-//	memset(saveData, 0, 0x1000);
-//	uintptr_t imageBase = (uintptr_t)GetModuleHandleA(0);
-//	uintptr_t value = *(uintptr_t*)(imageBase + 0x1948F10);
-//	value += 0x2998;
-//	FILE* file = fopen(V("campaing.sav"), V("wb"));
-//	memcpy(saveData, (void *)value, 0xB8);
-//	fwrite(saveData, 1, 0x100, file);
-//	fclose(file);
-//	return 1;
-//}
-//
-//static int SaveStoryData()
-//{
-//	memset(saveData, 0, 0x1000);
-//	uintptr_t imageBase = (uintptr_t)GetModuleHandleA(0);
-//	uintptr_t value = *(uintptr_t*)(imageBase + 0x1948F10);
-//	value += 0x25F0;
-//	FILE* file = fopen(V("story.sav"), V("wb"));
-//	memcpy(saveData, (void *)value, 0x98);
-//	fwrite(saveData, 1, 0x100, file);
-//	fclose(file);
-//	return 1;
-//}
-
 // Save data dump memory block
 unsigned char saveData[0x2000];
 
@@ -512,6 +438,9 @@ unsigned char mileData[0x08];
 
 // Star data dump memory block
 unsigned char starData[0x40];
+
+// Car code of the selected car (in the menu)
+unsigned char selectedCarCode;
 
 // Car save data reserved memory
 unsigned char carData[0xFF];
@@ -536,6 +465,9 @@ static int SaveOk()
 	return 1;
 }
 
+// Save Data Location Constant
+static uintptr_t saveLocation = 0x1948F10;
+
 // setFullTune(void): Int
 // If the currently loaded car is NOT fully tuned, 
 // updates the power and handling values to be fully
@@ -544,7 +476,8 @@ static int SaveOk()
 static int setFullTune()
 {
 	// Car save hex address
-	auto carSaveBase = (uintptr_t*)((*(uintptr_t*)(imageBase + 0x1948F10)) + 0x240);
+	auto carSaveBase = (uintptr_t*)((*(uintptr_t*)(imageBase + saveLocation)) + 0x240);
+
 	auto powerAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase)+0x98);
 	auto handleAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase)+0x9C);
 
@@ -594,7 +527,7 @@ static DWORD WINAPI forceFullTune(void* pArguments)
 // **** String Variables
 
 // Debugging event log file
-std::string logfile = "wmmt5_errors.txt";
+static std::string logfile = "wmmt5_errors.txt";
 
 // writeLog(filename: String, message: String): Int
 // Given a filename string and a message string, appends
@@ -651,6 +584,37 @@ static int writeDump(char* filename, unsigned char* data, size_t size)
 	}
 }
 
+// writeMemory(memory: uintptr_t, value: unsigned char, size: size_t, force: bool): Void
+// Given a memory address, a value and a size sets every empty b
+static void writeMemory(uintptr_t memory, int value, size_t size, bool force = false)
+{
+	// Loop until you hit the size specified by the size parameter
+	for (int i = 0; i < size; i++)
+	{
+		// Get the pointer to the current memory address
+		uintptr_t ptr = (memory + (i * 0x4));
+
+		// If the force switch is not set
+		if (!force)
+		{
+			// Get the data at the memory address
+			unsigned int a = *(uintptr_t*)ptr;
+
+			// If the block is empty
+			if (a == 0)
+			{
+				// Write data to it
+				memset((void*)ptr, value, 0x1);
+			}
+		}
+		else // Force switch set
+		{
+			// Write data to it
+			memset((void*)ptr, value, 0x1);
+		}
+	}
+}
+
 // dumpMemory(filename: char*, memory: uintptr_t, size: size_t): Void
 static int dumpMemory(char* filename, uintptr_t memory, size_t size)
 {
@@ -680,24 +644,6 @@ static int dumpMemory(char* filename, uintptr_t memory, size_t size)
 	return 0;
 }
 
-static int dumpPointers()
-{
-	dumpMemory("pointers_new.bin", (uintptr_t)(*(uintptr_t*)(imageBase + 0x1948F10)), 0x2000);
-	
-	return 1; // Success
-}
-
-static int dumpStarMemory()
-{
-	// Star memory address pointer
-	uintptr_t stars = *(uintptr_t*)((*(uintptr_t*)(imageBase + 0x1948F10)) + 0x110);
-
-	// Dump 2000 bytes from the stars region
-	dumpMemory("stars_memory.bin", stars, 0x2000);
-
-	return 1; // Success
-}
-
 // loadCarFile(filename: char*): Int
 // Given a filename, loads the data from
 // the car file into memory. 
@@ -721,13 +667,13 @@ static int loadCarFile(char* filename)
 			fread(carData, fsize, 1, file);
 
 			// Dereference the memory location for the car save data
-			uintptr_t carSaveLocation = *(uintptr_t*)((*(uintptr_t*)(imageBase + 0x1948F10)) + 0x240);
+			uintptr_t carSaveLocation = *(uintptr_t*)((*(uintptr_t*)(imageBase + saveLocation)) + 0x240);
 
 			memcpy((void*)(carSaveLocation + 0x08), carData + 0x08, 8); // ??
 			memcpy((void*)(carSaveLocation + 0x10), carData + 0x10, 8); // ??
-			memcpy((void*)(carSaveLocation + 0x20), carData + 0x20, 8); // ??
-			memcpy((void*)(carSaveLocation + 0x28), carData + 0x28, 8); // ??
-			// memcpy((void*)(carSaveLocation + 0x30), carData + 0x30, 8); // Stock Colour (0x30), Custom Colour (0x34)
+			memcpy((void*)(carSaveLocation + 0x20), carData + 0x20, 8); // Plate Region (0x20)
+			memcpy((void*)(carSaveLocation + 0x28), carData + 0x28, 8); // Car ID (0x0C)
+			// memcpy((void*)(carSaveLocation + 0x30), carData + 0x30, 4); // Stock Colour (0x30)
 			memcpy((void*)(carSaveLocation + 0x34), carData + 0x34, 4); // Custom Colour (0x34)
 			memcpy((void*)(carSaveLocation + 0x38), carData + 0x38, 8); // Rims Type (0x38), Rims Colour (0x3C)
 			memcpy((void*)(carSaveLocation + 0x40), carData + 0x40, 8); // Aero Type (0x40), Hood Type (0x44)
@@ -796,26 +742,25 @@ static int loadCarData(char* filepath)
 		// Enable custom car switch
 		customCar = true;
 	}
-
-	// Empty the car filename string
-	memset(carFileName, 0, 0xFF);
-
-	// Get the path to the specific car file
-	sprintf(carFileName, "%s\\%08X.car", carPath, *(DWORD*)(*(uintptr_t*)(*(uintptr_t*)(imageBase + 0x1948F10) + 0x240) + 0x2C));
-
-	// If the specific car file exists
-	if (FileExists(carFileName))
+	else // Custom car file does not exist
 	{
-		// Load the car file
-		loadCarFile(carFileName);
+		// Empty the car filename string
+		memset(carFileName, 0, 0xFF);
+
+		// Get the path to the specific car file
+		sprintf(carFileName, "%s\\%08X.car", carPath, selectedCarCode);
+
+		// If the specific car file exists
+		if (FileExists(carFileName))
+		{
+			// Load the car file
+			loadCarFile(carFileName);
+		}
 	}
 
 	// If the force full tune switch is set
 	if (ToBool(config["Tune"]["Force Full Tune"]))
 	{
-		// Create the force full tune thread
-		// CreateThread(0, 0, forceFullTune, 0, 0, 0);
-
 		// Set the car to be fully tuned
 		setFullTune();
 	}
@@ -831,7 +776,7 @@ static int saveCarData(char* filepath)
 	memset(carFileName, 0, 0xFF);
 
 	// Get the hex address for the start of the save data block
-	uintptr_t saveDataBase = *(uintptr_t*)(imageBase + 0x1948F10);
+	uintptr_t saveDataBase = *(uintptr_t*)(imageBase + saveLocation);
 
 	// Address where car save data starts
 	uintptr_t carSaveBase = *(uintptr_t*)(saveDataBase + 0x108);
@@ -865,7 +810,7 @@ static int saveCarData(char* filepath)
 	else // Custom car is not set
 	{
 		// Save the file to the specific car filename
-		sprintf(carPath, "%s\\%08X.car", carPath, *(DWORD*)(*(uintptr_t*)(*(uintptr_t*)(imageBase + 0x1948F10) + 0x240) + 0x2C));
+		sprintf(carPath, "%s\\%08X.car", carPath, selectedCarCode);
 	}
 
 	// Open the file at the given car path
@@ -896,7 +841,7 @@ static int saveStoryData(char* filepath)
 	// Save story data
 	
 	// Address where player save data starts
-	uintptr_t saveDataBase = *(uintptr_t*)(imageBase + 0x1948F10);
+	uintptr_t saveDataBase = *(uintptr_t*)(imageBase + saveLocation);
 
 	// Zero out save data binary
 	memset(saveData, 0, 0x2000);
@@ -909,12 +854,6 @@ static int saveStoryData(char* filepath)
 
 	// Dump the save data to openprogress.sav
 	writeDump(storyPath, saveData, 0x2000);
-
-	//SaveStoryData();
-	//SaveCampaingHonorData();
-	//SaveStoryModeNoLoseHonorData();
-	//SaveOtherHonorData();
-	//SaveCampaingHonorData2();
 
 	// Success
 	return 1;
@@ -938,7 +877,10 @@ static int loadStoryData(char* filepath)
 	strcat(storyPath, "\\openprogress.sav");
 
 	// Address where player save data starts
-	uintptr_t saveDataBase = *(uintptr_t*)(imageBase + 0x1948F10);
+	uintptr_t saveDataBase = *(uintptr_t*)(imageBase + saveLocation);
+
+	// Story save data offset
+	uintptr_t saveStoryBase = *(uintptr_t*)(saveDataBase + 0x108);
 
 	// Open the openprogress file with read privileges	
 	FILE* file = fopen(storyPath, "rb");
@@ -961,9 +903,6 @@ static int loadStoryData(char* filepath)
 			// Read all of the contents of the file into saveData
 			fread(saveData, fsize, 1, file);
 
-			// Story save data offset
-			uintptr_t saveStoryBase = *(uintptr_t*)(saveDataBase + 0x108);
-
 			// 0x00 - 70 23 - Should be able to use this to figure out what game a save is from
 
 			// (Mostly) discovered story data
@@ -981,14 +920,25 @@ static int loadStoryData(char* filepath)
 			// Save data loaded successfully
 			loadOk = true;
 		}
+
+		// Close the car file
 		fclose(file);
 	}
+	else // No story file
+	{
+		// If the start with 100 stories option is set
+		if (ToBool(config["Story"]["Start at 60 Stories"]))
+		{
+			// Set total wins to 100
+			memset((void*)(saveStoryBase + 0x118), 0x3C, 0x1);
 
-	//LoadStoryData();
-	//LoadCampaingHonorData();
-	//LoadStoryModeNoLoseHonorData();
-	//LoadOtherHonorData();
-	//LoadCampaingHonorData2();
+			// Set win streak to 100
+			memset((void*)(saveStoryBase + 0x138), 0x3C, 0x1);
+
+			// Set the current chapter to 5 (5 Chapters cleared)
+			memset((void*)(saveStoryBase + 0x124), 0x3, 0x1);
+		}
+	}
 
 	// Success status
 	return 1;
@@ -1029,11 +979,12 @@ static int loadMileData(char* filepath)
 			fread(mileData, mileSize, 1, miles);
 
 			// Get the pointer to the memory location storing the miles
-			auto mileageLocation = (uintptr_t*)(*(uintptr_t*)(imageBase + 0x1948F10) + 0x250);
+			auto mileageLocation = (uintptr_t*)(*(uintptr_t*)(imageBase + saveLocation) + 0x250);
 
 			// Copy the mile data from the file into the memory location
 			memcpy((void*)(mileageLocation), mileData + 0x00, 0x04);
 		}
+
 		// Close the miles file
 		fclose(miles);
 	}
@@ -1045,7 +996,7 @@ static int loadMileData(char* filepath)
 static int saveMileData(char* filepath)
 {
 	// Get the pointer to the memory location storing the miles
-	auto mileageLocation = (uintptr_t*)(*(uintptr_t*)(imageBase + 0x1948F10) + 0x250);
+	auto mileageLocation = (uintptr_t*)(*(uintptr_t*)(imageBase + saveLocation) + 0x250);
 	
 	// Miles path string
 	char milepath[0xFF];
@@ -1092,7 +1043,7 @@ static int saveStarData(char* filepath)
 	// Save Star Data
 
 	// Dereference the star pointer
-	uintptr_t starBase = *(uintptr_t*)((*(uintptr_t*)(imageBase + 0x1948F10)) + 0x110);
+	uintptr_t starBase = *(uintptr_t*)((*(uintptr_t*)(imageBase + saveLocation)) + 0x110);
 
 	// Dumps first 2 bytes from star pointer
 	memcpy(starData + 0x00, (void*)(starBase + 0x27C), 0x4);
@@ -1139,17 +1090,17 @@ static int loadStarData(char* filepath)
 			fread(starData, starSize, 1, starFile);
 
 			// Dereference the star pointer in the game memory
-			uintptr_t starBase = *(uintptr_t*)((*(uintptr_t*)(imageBase + 0x1948F10)) + 0x110);
+			uintptr_t starBase = *(uintptr_t*)((*(uintptr_t*)(imageBase + saveLocation)) + 0x110);
 
 			// Dumps first 2 bytes from star pointer
 			memcpy((void*)(starBase + 0x27C), starData + 0x00, 0x4);
 
 			// Dumps medal offsets from star pointer, 16 bytes
 			memcpy((void*)(starBase + 0x288), starData + 0x04, 0x10);
-
-			// Close the stars file
-			fclose(starFile);
 		}
+
+		// Close the stars file
+		fclose(starFile);
 	}
 
 	// Success
@@ -1188,7 +1139,7 @@ static int SaveGameData()
 		// Need to get the hex code for the selected car
 
 		// Address where player save data starts
-		uintptr_t saveDataBase = *(uintptr_t*)(imageBase + 0x1948F10);
+		uintptr_t saveDataBase = *(uintptr_t*)(imageBase + saveLocation);
 
 		// Address where the car save data starts
 		uintptr_t carSaveBase = *(uintptr_t*)(saveDataBase + 0x108);
@@ -1202,7 +1153,7 @@ static int SaveGameData()
 		else // Custom car is not set
 		{
 			// Add the custom folder to the save path
-			sprintf(savePath, "%s\\%08X", savePath, *(DWORD*)(*(uintptr_t*)(*(uintptr_t*)(imageBase + 0x1948F10) + 0x240) + 0x2C));
+			sprintf(savePath, "%s\\%08X", savePath, selectedCarCode);
 		}
 	}
 
@@ -1243,6 +1194,9 @@ static int loadGameData()
 	// sprintf(loadPath, ".\\SaveData");
 	sprintf(loadPath, ".");
 
+	// Get the path to the selected car
+	selectedCarCode = *(DWORD*)(*(uintptr_t*)(*(uintptr_t*)(imageBase + saveLocation) + 0x240) + 0x2C);
+
 	// Seperate save file / cars per user profile
 	if (ToBool(config["Save"]["Save Per Custom Name"]))
 	{
@@ -1259,7 +1213,7 @@ static int loadGameData()
 		// Need to get the hex code for the selected car
 
 		// Address where player save data starts
-		uintptr_t saveDataBase = *(uintptr_t*)(imageBase + 0x1948F10);
+		uintptr_t saveDataBase = *(uintptr_t*)(imageBase + saveLocation);
 
 		// Address where the car save data starts
 		uintptr_t carSaveBase = *(uintptr_t*)(saveDataBase + 0x108);
@@ -1273,7 +1227,7 @@ static int loadGameData()
 		else // Custom car is not set
 		{
 			// Add the custom folder to the save path
-			sprintf(loadPath, "%s\\%08X", loadPath, *(DWORD*)(*(uintptr_t*)(*(uintptr_t*)(imageBase + 0x1948F10) + 0x240) + 0x2C));
+			sprintf(loadPath, "%s\\%08X", loadPath, selectedCarCode);
 		}
 	}
 

@@ -291,6 +291,9 @@ static unsigned int WINAPI Hook_bind(SOCKET s, const sockaddr* addr, int namelen
 // Save data dump memory block
 static unsigned char saveData[0x2000];
 
+// Car code of the selected car (in the menu)
+unsigned char selectedCarCodeMt6;
+
 // Sets if saving is allowed or not
 static bool saveOk = false;
 
@@ -315,7 +318,7 @@ static int SaveOk()
 }
 
 // Save Data Location Constant
-static uintptr_t SaveLocation = 0x1E183F8;
+static uintptr_t saveLocation = 0x1E183F8;
 
 // setCarTuneNeons(void): Int
 // If the currently loaded car is NOT fully tuned, 
@@ -325,7 +328,7 @@ static uintptr_t SaveLocation = 0x1E183F8;
 static int setCarTuneNeons()
 {
 	// Car save hex address
-	uintptr_t carSaveLocation = *(uintptr_t*)((*(uintptr_t*)(imageBase + SaveLocation)) + 0x2D8);
+	uintptr_t carSaveLocation = *(uintptr_t*)((*(uintptr_t*)(imageBase + saveLocation)) + 0x2D8);
 
 	// Force neon is set
 	if (ForceNeon)
@@ -382,7 +385,7 @@ static DWORD WINAPI SpamCarTuneNeons(LPVOID)
 // **** String Variables
 
 // Debugging event log file
-std::string logfileMt6 = "wmmt6_errors.txt";
+static std::string logfile = "wmmt6_errors.txt";
 
 // writeLog(filename: String, message: String): Int
 // Given a filename string and a message string, appends
@@ -462,7 +465,7 @@ static int loadCarFile(char* filename)
 			fread(carData, fsize, 1, file);
 
 			// Dereference the memory location for the car save data
-			uintptr_t carSaveLocation = *(uintptr_t*)((*(uintptr_t*)(imageBase + SaveLocation)) + 0x2D8);
+			uintptr_t carSaveLocation = *(uintptr_t*)((*(uintptr_t*)(imageBase + saveLocation)) + 0x2D8);
 
 			// memcpy((void*)(carSaveLocation + 0x00), carData + 0x00, 8); // ??
 			memcpy((void*)(carSaveLocation + 0x08), carData + 0x08, 8); // ??
@@ -540,18 +543,20 @@ static int loadCarData(char* filepath)
 		// Enable custom car switch
 		customCar = true;
 	}
-
-	// Empty the car filename string
-	memset(carFileName, 0, 0xFF);
-
-	// Get the path to the specific car file
-	sprintf(carFileName, "%s\\%08X.car", carPath, *(DWORD*)(*(uintptr_t*)(*(uintptr_t*)(imageBase + SaveLocation) + 0x2D8) + 0x34));
-
-	// If the specific car file exists
-	if (FileExists(carFileName))
+	else // No custom.car file
 	{
-		// Load the car file
-		loadCarFile(carFileName);
+		// Empty the car filename string
+		memset(carFileName, 0, 0xFF);
+
+		// Get the path to the specific car file
+		sprintf(carFileName, "%s\\%08X.car", carPath, selectedCarCodeMt6);
+
+		// If the specific car file exists
+		if (FileExists(carFileName))
+		{
+			// Load the car file
+			loadCarFile(carFileName);
+		}
 	}
 
 	// If the force full tune switch is set
@@ -592,7 +597,7 @@ static int saveCarData(char* filepath)
 	std::filesystem::create_directories(carPath);
 
 	// Copy the 0xE0 bytes from memory to the car data array
-	memcpy(carData, (void*)*(uintptr_t*)(*(uintptr_t*)(imageBase + SaveLocation) + 0x2D8), 0xE0);
+	memcpy(carData, (void*)*(uintptr_t*)(*(uintptr_t*)(imageBase + saveLocation) + 0x2D8), 0xE0);
 
 	// If custom car is set
 	if (customCar)
@@ -603,7 +608,7 @@ static int saveCarData(char* filepath)
 	else // Custom car is not set
 	{
 		// Save the file to the specific car filename
-		sprintf(carPath, "%s\\%08X.car", carPath, *(DWORD*)(*(uintptr_t*)(*(uintptr_t*)(imageBase + SaveLocation) + 0x2D8) + 0x34));
+		sprintf(carPath, "%s\\%08X.car", carPath, selectedCarCodeMt6);
 	}
 
 	// Open the file at the given car path
@@ -634,7 +639,7 @@ static int saveStoryData(char* filepath)
 	// Save story data
 
 	// Address where player save data starts
-	uintptr_t saveDataBase = *(uintptr_t*)(imageBase + SaveLocation);
+	uintptr_t saveDataBase = *(uintptr_t*)(imageBase + saveLocation);
 
 	// Zero out save data binary
 	memset(saveData, 0, 0x2000);
@@ -678,7 +683,10 @@ static int loadStoryData(char* filepath)
 	strcat(storyPath, "\\openprogress.sav");
 
 	// Address where player save data starts
-	uintptr_t saveDataBase = *(uintptr_t*)(imageBase + SaveLocation);
+	uintptr_t saveDataBase = *(uintptr_t*)(imageBase + saveLocation);
+
+	// Story save data offset
+	uintptr_t saveStoryBase = *(uintptr_t*)(saveDataBase + 0x178);
 
 	// Open the openprogress file with read privileges	
 	FILE* file = fopen(storyPath, "rb");
@@ -701,9 +709,6 @@ static int loadStoryData(char* filepath)
 			// Read all of the contents of the file into saveData
 			fread(saveData, fsize, 1, file);
 
-			// Story save data offset
-			uintptr_t saveStoryBase = *(uintptr_t*)(saveDataBase + 0x178);
-
 			// 0x00 - 70 23 - Should be able to use this to figure out what game a save is from
 
 			// (Mostly) discovered story data
@@ -722,6 +727,21 @@ static int loadStoryData(char* filepath)
 			loadOk = true;
 		}
 		fclose(file);
+	}
+	else // No story file
+	{
+		// If the start with 100 stories option is set
+		if (ToBool(config["Story"]["Start at 100 Stories"]))
+		{
+			// Set total wins to 100
+			memset((void*)(saveStoryBase + 0xE8), 0x64, 0x1);
+
+			// Set win streak to 100
+			memset((void*)(saveStoryBase + 0x100), 0x64, 0x1);
+
+			// Set the current chapter to 5 (5 Chapters cleared)
+			memset((void*)(saveStoryBase + 0xF8), 0x5, 0x1);
+		}
 	}
 
 	//LoadStoryData();
@@ -832,7 +852,7 @@ static int SaveGameData()
 		// Need to get the hex code for the selected car
 
 		// Address where player save data starts
-		uintptr_t saveDataBase = *(uintptr_t*)(imageBase + SaveLocation);
+		uintptr_t saveDataBase = *(uintptr_t*)(imageBase + saveLocation);
 
 		// Address where the car save data starts
 		uintptr_t carSaveBase = *(uintptr_t*)(saveDataBase + 0x108);
@@ -846,7 +866,7 @@ static int SaveGameData()
 		else // Custom car is not set
 		{
 			// Add the custom folder to the save path
-			sprintf(savePath, "%s\\%08X", savePath, *(DWORD*)(*(uintptr_t*)(*(uintptr_t*)(imageBase + SaveLocation) + 0x2D8) + 0x34));
+			sprintf(savePath, "%s\\%08X", savePath, selectedCarCodeMt6);
 		}
 	}
 
@@ -884,6 +904,8 @@ static int loadGameData()
 	// sprintf(loadPath, ".\\SaveData");
 	sprintf(loadPath, ".");
 
+	selectedCarCodeMt6 = *(DWORD*)(*(uintptr_t*)(*(uintptr_t*)(imageBase + saveLocation) + 0x2D8) + 0x34);
+
 	// Seperate save file / cars per user profile
 	if (ToBool(config["Save"]["Save Per Custom Name"]))
 	{
@@ -900,7 +922,7 @@ static int loadGameData()
 		// Need to get the hex code for the selected car
 
 		// Address where player save data starts
-		uintptr_t saveDataBase = *(uintptr_t*)(imageBase + SaveLocation);
+		uintptr_t saveDataBase = *(uintptr_t*)(imageBase + saveLocation);
 
 		// Address where the car save data starts
 		uintptr_t carSaveBase = *(uintptr_t*)(saveDataBase + 0x108);
@@ -914,7 +936,7 @@ static int loadGameData()
 		else // Custom car is not set
 		{
 			// Add the custom folder to the save path
-			sprintf(loadPath, "%s\\%08X", loadPath, *(DWORD*)(*(uintptr_t*)(*(uintptr_t*)(imageBase + SaveLocation) + 0x2D8) + 0x34));
+			sprintf(loadPath, "%s\\%08X", loadPath, selectedCarCodeMt6);
 		}
 	}
 
