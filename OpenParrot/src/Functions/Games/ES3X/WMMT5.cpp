@@ -669,27 +669,42 @@ static int loadCarFile(char* filename)
 			// Dereference the memory location for the car save data
 			uintptr_t carSaveLocation = *(uintptr_t*)((*(uintptr_t*)(imageBase + saveLocation)) + 0x240);
 
-			memcpy((void*)(carSaveLocation + 0x08), carData + 0x08, 8); // ??
-			memcpy((void*)(carSaveLocation + 0x10), carData + 0x10, 8); // ??
-			memcpy((void*)(carSaveLocation + 0x20), carData + 0x20, 8); // Plate Region (0x20)
-			memcpy((void*)(carSaveLocation + 0x28), carData + 0x28, 8); // Car ID (0x0C)
+			memcpy((void*)(carSaveLocation + 0x20), carData + 0x20, 0x8); // Plate Region (0x20)
+			memcpy((void*)(carSaveLocation + 0x28), carData + 0x28, 0x8); // Car ID (0x0C)
 			// memcpy((void*)(carSaveLocation + 0x30), carData + 0x30, 4); // Stock Colour (0x30)
-			memcpy((void*)(carSaveLocation + 0x34), carData + 0x34, 4); // Custom Colour (0x34)
-			memcpy((void*)(carSaveLocation + 0x38), carData + 0x38, 8); // Rims Type (0x38), Rims Colour (0x3C)
-			memcpy((void*)(carSaveLocation + 0x40), carData + 0x40, 8); // Aero Type (0x40), Hood Type (0x44)
-			memcpy((void*)(carSaveLocation + 0x50), carData + 0x50, 8); // Wing Type (0x50), Mirror Type (0x54)
-			memcpy((void*)(carSaveLocation + 0x58), carData + 0x58, 8); // Body Sticker Type (0x58), Variant (0x5C)
-			memcpy((void*)(carSaveLocation + 0x68), carData + 0x68, 8); // ??
-			memcpy((void*)(carSaveLocation + 0x7C), carData + 0x7C, 1); // Neon Type
-			memcpy((void*)(carSaveLocation + 0x80), carData + 0x80, 8); // Trunk Colour (0x80), Plate Frame (0x84)
-			memcpy((void*)(carSaveLocation + 0x88), carData + 0x88, 8); // Plate Frame Colour (0x8A)
-			memcpy((void*)(carSaveLocation + 0x90), carData + 0x90, 8); // ??
-			memcpy((void*)(carSaveLocation + 0x98), carData + 0x98, 8); // Power (0x98), Handling (0x9C)
-			memcpy((void*)(carSaveLocation + 0xA0), carData + 0xA0, 8); // Title (0xA0-0xA3), Rank (0xA4)
-			memcpy((void*)(carSaveLocation + 0xA8), carData + 0xA8, 8); // ??
+			memcpy((void*)(carSaveLocation + 0x34), carData + 0x34, 0x4); // Custom Colour (0x34)
+			memcpy((void*)(carSaveLocation + 0x38), carData + 0x38, 0x8); // Rims Type (0x38), Rims Colour (0x3C)
+
+			memcpy((void*)(carSaveLocation + 0x40), carData + 0x40, 0x8); // Aero Type (0x40), Hood Type (0x44)
+			// memcpy((void*)(carSaveLocation + 0x48), carData + 0x48, 0x8); // Crash (Pointer)
+			memcpy((void*)(carSaveLocation + 0x50), carData + 0x50, 0x8); // Wing Type (0x50), Mirror Type (0x54)
+			memcpy((void*)(carSaveLocation + 0x58), carData + 0x58, 0x8); // Body Sticker Type (0x58), Variant (0x5C)
+
+			// memcpy((void*)(carSaveLocation + 0x60), carData + 0x60, 8); // Crash (Pointer)
+			memcpy((void*)(carSaveLocation + 0x68), carData + 0x68, 0x8); // ??
+			memcpy((void*)(carSaveLocation + 0x70), carData + 0x70, 0x8); // ??
+			memcpy((void*)(carSaveLocation + 0x78), carData + 0x78, 0x8); // Neon Type
+
+			// Example for setting license plate number to 4 20:
+			// memset((void*)(carSaveLocation + 0x8D), 0x01, 0x1);
+			// memset((void*)(carSaveLocation + 0x8C), 0xA4, 0x1);
+
+			memcpy((void*)(carSaveLocation + 0x80), carData + 0x80, 0x8); // Trunk Colour (0x80), Plate Frame (0x84)
+			memcpy((void*)(carSaveLocation + 0x88), carData + 0x88, 0x8); // Plate Frame Colour (0x8A), License Plate Number (0x8C)
+			memcpy((void*)(carSaveLocation + 0x90), carData + 0x90, 0x8); // ??
+			memcpy((void*)(carSaveLocation + 0x98), carData + 0x98, 0x8); // Power (0x98), Handling (0x9C)
+
+			memcpy((void*)(carSaveLocation + 0xA0), carData + 0xA0, 0x8); // Title (0xA0-0xA3), Rank (0xA4)
+			memcpy((void*)(carSaveLocation + 0xA8), carData + 0xA8, 0x8); // ??
+			// memcpy((void*)(carSaveLocation + 0xB0), carData + 0xB0, 8); // ??
 			memcpy((void*)(carSaveLocation + 0xB8), carData + 0xB8, 8); // ??
-			memcpy((void*)(carSaveLocation + 0xC8), carData + 0xC8, 8); // ??
-			memcpy((void*)(carSaveLocation + 0xD8), carData + 0xD8, 8); // ??
+
+			memcpy((void*)(carSaveLocation + 0xC0), carData + 0xC0, 8); // ??
+			memcpy((void*)(carSaveLocation + 0xC8), carData + 0xC8, 0x8); // ??
+			// memcpy((void*)(carSaveLocation + 0xD0), carData + 0xD0, 8); // Pointer (Crash)
+			memcpy((void*)(carSaveLocation + 0xD8), carData + 0xD8, 0x8); // ??
+
+			memcpy((void*)(carSaveLocation + 0xF8), carData + 0xF8, 0x8); // ??
 		}
 
 		// Disable loading
