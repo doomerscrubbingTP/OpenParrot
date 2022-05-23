@@ -442,6 +442,66 @@ static int writeDump(char* filename, unsigned char* data, size_t size)
 	}
 }
 
+// writeMemory(memory: uintptr_t, value: unsigned char, size: size_t, force: bool): Void
+// Given a memory address, a value and a size sets every empty b
+static void writeMemory(uintptr_t memory, int value, size_t size, bool force = false)
+{
+	// Loop until you hit the size specified by the size parameter
+	for (int i = 0; i < size; i++)
+	{
+		// Get the pointer to the current memory address
+		uintptr_t ptr = (memory + (i * 0x4));
+
+		// If the force switch is not set
+		if (!force)
+		{
+			// Get the data at the memory address
+			unsigned int a = *(uintptr_t*)ptr;
+
+			// If the block is empty
+			if (a == 0)
+			{
+				// Write data to it
+				memset((void*)ptr, value, 0x1);
+			}
+		}
+		else // Force switch set
+		{
+			// Write data to it
+			memset((void*)ptr, value, 0x1);
+		}
+	}
+}
+
+// dumpMemory(filename: char*, memory: uintptr_t, size: size_t): Void
+static int dumpMemory(char* filename, uintptr_t memory, size_t size)
+{
+	// Create the array to dump the memory data to
+	unsigned char* data = (unsigned char*)malloc(size);
+
+	// If malloc is successful
+	if (data)
+	{
+		// Set all of the pointer data to zero
+		memset(data, 0, size);
+
+		// Copy the memory from the source
+		memcpy(data, (void*)memory, size);
+
+		// Write the memory to a file
+		writeDump(filename, data, size);
+
+		// Free the allocated memory
+		free(data);
+
+		// Success
+		return 1;
+	}
+
+	// Failure
+	return 0;
+}
+
 // loadCarFile(filename: char*): Int
 // Given a filename, loads the data from
 // the car file into memory. 
@@ -467,27 +527,48 @@ static int loadCarFile(char* filename)
 			// Dereference the memory location for the car save data
 			uintptr_t carSaveLocation = *(uintptr_t*)((*(uintptr_t*)(imageBase + saveLocation)) + 0x2D8);
 
-			// memcpy((void*)(carSaveLocation + 0x00), carData + 0x00, 8); // ??
+			// memcpy((void*)(carSaveLocation + 0x00), carData + 0x00, 8); // Crash (Pointer)
 			memcpy((void*)(carSaveLocation + 0x08), carData + 0x08, 8); // ??
-			// memcpy((void*)(carSaveLocation + 0x10), carData + 0x10, 8); // ??
+			// memcpy((void*)(carSaveLocation + 0x10), carData + 0x10, 8); // Crash (Pointer)
 			memcpy((void*)(carSaveLocation + 0x18), carData + 0x18, 8); // ??
-			// memcpy((void*)(carSaveLocation + 0x20), carData + 0x20, 8); // ??
-			memcpy((void*)(carSaveLocation + 0x28), carData + 0x28, 8); // ??
+
+			// memcpy((void*)(carSaveLocation + 0x20), carData + 0x20, 8); // Crash (Pointer)
+			memcpy((void*)(carSaveLocation + 0x28), carData + 0x28, 8); // Region (0x28)
 			memcpy((void*)(carSaveLocation + 0x30), carData + 0x30, 8); // Car ID (0x34)
 			// memcpy((void*)(carSaveLocation + 0x38), carData + 0x38, 4); // Stock Colour (0x38)
 			memcpy((void*)(carSaveLocation + 0x3C), carData + 0x3C, 4); // Custom Colour (0x3C)
+
 			memcpy((void*)(carSaveLocation + 0x40), carData + 0x40, 8); // Rims (0x40), Rims Colour (0x44)
 			memcpy((void*)(carSaveLocation + 0x48), carData + 0x48, 8); // Aero (0x48), Hood (0x4C)
-			// memcpy((void*)(carSaveLocation + 0x50), carData + 0x50, 8); // ??
+			// memcpy((void*)(carSaveLocation + 0x50), carData + 0x50, 8); // Crash (Pointer)
 			memcpy((void*)(carSaveLocation + 0x58), carData + 0x58, 8); // Wing (0x58), Mirror (0x5C)
+
 			memcpy((void*)(carSaveLocation + 0x60), carData + 0x60, 8); // Neon (0x60), Trunk (0x64)
 			memcpy((void*)(carSaveLocation + 0x68), carData + 0x68, 8); // Plate Frame Type (0x68), Plate Frame Variant (0x6C)
-			memcpy((void*)(carSaveLocation + 0x70), carData + 0x70, 8); // Plate Frame Number0 (0x70), Plate Frame Number1 (0x71), Power (0x74)
+			memcpy((void*)(carSaveLocation + 0x70), carData + 0x70, 8); // Plate Frame Number (0x70-71), Power (0x74)
+			// memcpy((void*)(carSaveLocation + 0x78), carData + 0x78, 8); // Crash (Pointer)
+
+			// Example for setting license plate number to 4 20:
+			memset((void*)(carSaveLocation + 0x71), 0x01, 0x1);
+			memset((void*)(carSaveLocation + 0x70), 0xA4, 0x1);
+
 			memcpy((void*)(carSaveLocation + 0x80), carData + 0x80, 8); // Handling (0x80), Rank (0x84)
-			memcpy((void*)(carSaveLocation + 0x90), carData + 0x90, 8); // ??
-			memcpy((void*)(carSaveLocation + 0x98), carData + 0x98, 8); // ??
+			// memcpy((void*)(carSaveLocation + 0x88), carData + 0x88, 8); // Crash (Pointer)
+			memcpy((void*)(carSaveLocation + 0x90), carData + 0x90, 8); // Window Sticker Switch (0x90)
+			memcpy((void*)(carSaveLocation + 0x98), carData + 0x98, 8); // Window Sticker ID (0x98)
+
+			// writeMemory(carSaveLocation + 0x90, 0x1, 0x1);
+			// writeMemory(carSaveLocation + 0x98, 0x10, 0x1);
+
+			// memcpy((void*)(carSaveLocation + 0xA0), carData + 0xA0, 8); // Crash (Pointer)
+			// memcpy((void*)(carSaveLocation + 0xA8), carData + 0xA8, 8); // Crash (Pointer)
 			memcpy((void*)(carSaveLocation + 0xB0), carData + 0xB0, 8); // ??
+			// memcpy((void*)(carSaveLocation + 0xB8), carData + 0xB8, 8); // Crash (Pointer)
+
+			// memcpy((void*)(carSaveLocation + 0xC0), carData + 0xC0, 8); // Crash (Pointer)
 			memcpy((void*)(carSaveLocation + 0xC8), carData + 0xC8, 8); // ??
+			memcpy((void*)(carSaveLocation + 0xD0), carData + 0xD0, 8); // ??
+			// memcpy((void*)(carSaveLocation + 0xD8), carData + 0xD8, 8); // Crash (Pointer)
 		}
 
 		// Disable loading
@@ -951,6 +1032,17 @@ static int loadGameData()
 
 	// Load the miles save file
 	loadMileData(loadPath);
+
+	// dumpMemory("0x20.bin", carSaveLocation + 0x20, 0x100);
+	// dumpMemory("0x38.bin", carSaveLocation + 0x38, 0x100);
+	// dumpMemory("0x50.bin", carSaveLocation + 0x50, 0x100);
+	// dumpMemory("0x78.bin", carSaveLocation + 0x78, 0x100);
+	// dumpMemory("0x88.bin", carSaveLocation + 0x88, 0x100);
+	// dumpMemory("0xA0.bin", carSaveLocation + 0xA0, 0x100);
+	// dumpMemory("0xA8.bin", carSaveLocation + 0xA8, 0x100);
+	// dumpMemory("0xB8.bin", carSaveLocation + 0xB8, 0x100);
+	// dumpMemory("0xC0.bin", carSaveLocation + 0xC0, 0x100);
+	// dumpMemory("0xD8.bin", carSaveLocation + 0xD8, 0x100);
 
 	// Success
 	return 1;

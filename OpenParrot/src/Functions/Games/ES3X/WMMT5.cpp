@@ -689,7 +689,7 @@ static int loadCarFile(char* filename)
 			// memset((void*)(carSaveLocation + 0x8D), 0x01, 0x1);
 			// memset((void*)(carSaveLocation + 0x8C), 0xA4, 0x1);
 
-			memcpy((void*)(carSaveLocation + 0x80), carData + 0x80, 0x8); // Trunk Colour (0x80), Plate Frame (0x84)
+			memcpy((void*)(carSaveLocation + 0x80), carData + 0x80, 0x8); // Trunk Colour (0x80), Plate Frame (0x84), 1SP-3SP Frame (0x85-0x87)
 			memcpy((void*)(carSaveLocation + 0x88), carData + 0x88, 0x8); // Plate Frame Colour (0x8A), License Plate Number (0x8C)
 			memcpy((void*)(carSaveLocation + 0x90), carData + 0x90, 0x8); // ??
 			memcpy((void*)(carSaveLocation + 0x98), carData + 0x98, 0x8); // Power (0x98), Handling (0x9C)

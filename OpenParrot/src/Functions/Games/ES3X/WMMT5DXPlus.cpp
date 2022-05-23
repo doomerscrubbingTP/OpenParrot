@@ -382,17 +382,23 @@ bool WINAPI Hook_SetSystemTime(SYSTEMTIME* in)
 // Maximum title length (16 Characters)
 #define TITLE_LENGTH 0x10
 
+// Maximum name length (16 bytes, 5 characters)
+#define NAME_LENGTH 0x10
+
 // Title string storage
 char title[TITLE_LENGTH];
+
+// Car Name string storage
+char name[NAME_LENGTH];
 
 // Save data dump memory block
 unsigned char saveDatadxp[0x2000];
 
+// Star data dump memory block
+unsigned char versusDataDxp[0x100];
+
 // Mile data dump memory block
 unsigned char mileDatadxp[0x08];
-
-// Star data dump memory block
-unsigned char starDataDxp[0x40];
 
 // Car code of the selected car (in the menu)
 unsigned char selectedCarCodeDxp;
@@ -414,6 +420,9 @@ char carFileNameDxp[0xFF];
 
 // Title filename string
 char titleFileNameDxp[0xFF];
+
+// Car name filename string
+char nameFileNameDxp[0xFF];
 
 // SaveOk(void): Void
 // Enables saving
@@ -524,7 +533,7 @@ static DWORD WINAPI spamCustomNameDxp(LPVOID)
 }
 
 // ******************************************** //
-// ************ Debug Data Logging ************ //
+// ************ Development  Tools ************ //
 // ******************************************** //
 
 // ************* Global Variables ************* //
@@ -565,6 +574,9 @@ static int writeLog(std::string filename, std::string message)
 }
 
 // writeDump(filename: Char*, data: unsigned char *, size: size_t): Int
+// Given a filename, a data buffer pointer and a size dumps 'size' data
+// from 'data' to the filename provided by 'filename'. This code is used
+// for most of the saving routines, and is not just  for dev purposes.
 static int writeDump(char * filename, unsigned char * data, size_t size)
 {
 	// Open the file with the provided filename
@@ -621,6 +633,8 @@ static void writeMemory(uintptr_t memory, int value, size_t size, bool force = f
 }
 
 // dumpMemory(filename: char*, memory: uintptr_t, size: size_t): Void
+// Given a filename, a pointer to a position in memory and a size, dumps
+// 'size' amount of data from 'memory' and writes it to the file 'filename'.
 static int dumpMemory(char* filename, uintptr_t memory, size_t size)
 {
 	// Create the array to dump the memory data to
@@ -649,88 +663,338 @@ static int dumpMemory(char* filename, uintptr_t memory, size_t size)
 	return 0;
 }
 
-// loadCarFile(filename: char*): Int
-// Given a filename, loads the data from
-// the car file into memory. 
-static int loadCarFile(char* filename)
+// Number of seconds to wait between writes
+static int dumpMemoryDelay;
+static std::string dumpMemoryFolder;
+static uintptr_t dumpMemoryAddr;
+static size_t dumpMemorySize;
+
+// dumpMemoryThread(pArguments: void*): DWORD WINAPI
+static DWORD WINAPI watchMemoryThread(void* pArguments)
 {
-	// Open the file with the filename
+	// File to dump the current memory to
+	static char path[255];
+
+	// Loop counter
+	int i = 0;
+
+	// Infinite loop
+	while (true)
+	{
+		// Empty the path string
+		memset(path, 0x0, 255);
+
+		// Write the path to the new file to the string
+		sprintf(path, "%s\\%i.bin", dumpMemoryFolder.c_str(), i);
+
+		// Dump the contents of the address to the file
+		dumpMemory(path, dumpMemoryAddr, dumpMemorySize);
+
+		// Wait for 'delay' number of seconds before dumping again
+		std::this_thread::sleep_for(std::chrono::seconds(dumpMemoryDelay));
+
+		// Increment the counter
+		i++;
+	}
+}
+
+// watchMemory(char * filename, uintptr_t memory, size_t size, int delay)
+// Given a filename (folder path), memory pointer, size and delay continiously
+// dumps 'size' data from memory address 'memory' incrementally to files in 
+// the folder 'filename'. Memory will be dumped incrementally every 'delay' seconds.
+// Unfortunately due to the reliance on global variables, only one dumpMemoryThread
+// can be running at any time.
+static void watchMemory(char* filename, uintptr_t memory, size_t size, int delay)
+{
+	// Update the dumpMemoryFolder variable
+	dumpMemoryFolder = std::string(filename);
+
+	// Create the path to the folder 'filename'
+	std::filesystem::create_directories(dumpMemoryFolder);
+
+	// Update the other global variables for the thread
+
+	dumpMemoryDelay = delay;
+	dumpMemoryAddr = memory;
+	dumpMemorySize = size;
+
+	// Start the memory dump thread
+	CreateThread(0, 0, watchMemoryThread, 0, 0, 0);
+}
+
+static int loadCustomSticker(char* filename)
+{
+	// Address where player save data starts
+	uintptr_t saveDataBase = *(uintptr_t*)(imageBaseDxp + saveLocation);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(saveDataBase + 0x268);
+
+	// DEBUG: Address where the window sticker (might be) saved
+	uintptr_t stickerPtr = *(uintptr_t*)(carSaveBase + 0xC8);
+
+	dumpMemory("stickerptr_pre.bin", stickerPtr, 0x20);
+
+	// G
+	memset((void*)(stickerPtr + 0x0), 0xEF, 0x1);
+	memset((void*)(stickerPtr + 0x1), 0xBC, 0x1);
+	memset((void*)(stickerPtr + 0x2), 0xA7, 0x1);
+
+	// U
+	memset((void*)(stickerPtr + 0x3), 0xEF, 0x1);
+	memset((void*)(stickerPtr + 0x4), 0xBC, 0x1);
+	memset((void*)(stickerPtr + 0x5), 0xB5, 0x1);
+
+	// E
+	memset((void*)(stickerPtr + 0x6), 0xEF, 0x1);
+	memset((void*)(stickerPtr + 0x7), 0xBC, 0x1);
+	memset((void*)(stickerPtr + 0x8), 0xA5, 0x1);
+
+	// S
+	memset((void*)(stickerPtr + 0x9), 0xEF, 0x1);
+	memset((void*)(stickerPtr + 0xA), 0xBC, 0x1);
+	memset((void*)(stickerPtr + 0xB), 0xB3, 0x1);
+
+	// T
+	memset((void*)(stickerPtr + 0xC), 0xEF, 0x1);
+	memset((void*)(stickerPtr + 0xD), 0xBC, 0x1);
+	memset((void*)(stickerPtr + 0xE), 0xB4, 0x1);
+
+	dumpMemory("stickerptr_post.bin", stickerPtr, 0x20);
+
+	return 1; // Success
+}
+
+/*
+// Given a character, returns an integer
+// which represents the full-width ascii
+// for that character. If the character
+// does not have a valid full width 
+// equivalent, returns zero.
+unsigned int getFullWidthChar(char c)
+{
+	// Table of full-width ascii values
+	// Index is the ascii value of the character
+	// minus 0x21 (the first valid full-width ascii character)
+	unsigned int table[] = {
+
+		0xEFBC81, // !
+		0xEFBC82, // "
+		0xEFBC83, // #
+		0xEFBC84, // $
+		0xEFBC85, // %
+		0xEFBC86, // &
+		0xEFBC87, // '
+		0xEFBC88, // (
+		0xEFBC89, // )
+		0xEFBC8A, // *
+		0xEFBC8B, // +
+		0xEFBC8C, // ,
+		0xEFBC8D, // -
+		0xEFBC8E, // .
+		0xEFBC8F, // /
+		0xEFBC90, // 0
+		0xEFBC91, // 1
+		0xEFBC92, // 2
+		0xEFBC93, // 3
+		0xEFBC94, // 4
+		0xEFBC95, // 5
+		0xEFBC96, // 6
+		0xEFBC97, // 7
+		0xEFBC98, // 8
+		0xEFBC99, // 9
+		0xEFBC9A, // :
+		0xEFBC9B, // ;
+		0xEFBC9C, // <
+		0xEFBC9D, // =
+		0xEFBC9E, // >
+		0xEFBC9F, // ?
+		0xEFBCA0, // @
+		0xEFBCA1, // A
+		0xEFBCA2, // B
+		0xEFBCA3, // C
+		0xEFBCA4, // D
+		0xEFBCA5, // E
+		0xEFBCA6, // F
+		0xEFBCA7, // G
+		0xEFBCA8, // H
+		0xEFBCA9, // I
+		0xEFBCAA, // K
+		0xEFBCAB, // L
+		0xEFBCAC, // M
+		0xEFBCAD, // N
+		0xEFBCAE, // O
+		0xEFBCAF, // P
+		0xEFBCB0, // Q
+		0xEFBCB1, // R
+		0xEFBCB2, // S
+		0xEFBCB3, // T
+		0xEFBCB4, // U
+		0xEFBCB5, // V
+		0xEFBCB6, // W
+		0xEFBCB7, // X
+		0xEFBCB8, // Y
+		0xEFBCB9, // Z
+		0xEFBCBA, // [
+		0xEFBCBB, // '\'
+		0xEFBCBC, // ]
+		0xEFBCBD, // ^
+		0xEFBCBE, // _
+		0xEFBD80, // `
+		0xEFBD81, // a
+		0xEFBD82, // b
+		0xEFBD83, // c
+		0xEFBD84, // d
+		0xEFBD85, // e
+		0xEFBD86, // f
+		0xEFBD87, // g
+		0xEFBD88, // h
+		0xEFBD89, // i
+		0xEFBD8A, // j
+		0xEFBD8B, // k
+		0xEFBD8C, // l
+		0xEFBD8D, // m
+		0xEFBD8E, // n
+		0xEFBD8F, // o
+		0xEFBD90, // p
+		0xEFBD91, // q
+		0xEFBD92, // r
+		0xEFBD93, // s
+		0xEFBD94, // t
+		0xEFBD95, // u
+		0xEFBD96, // v
+		0xEFBD97, // w
+		0xEFBD98, // x
+		0xEFBD99, // y
+		0xEFBD9A, // z
+		0xEFBD9B, // {
+		0xEFBD9C, // |
+		0xEFBD9D, // }
+		0xEFBD9E, // ~
+
+	};
+
+	// If c is at least 21, but not out of bounds
+	if (c > 0x20 && c < sizeof(table)/sizeof(*table))
+	{
+		// Return the index for the character in the table
+		return table[(c-0x20)];
+	}
+	else // Character is not in the table
+	{
+		// Return zero
+		return 0;
+	}
+}
+*/
+
+// saveCustomName(filename: char*): Int
+// Given a filename, saves the default custom name
+// attribute to the file. Returns true on a successful execution.
+static int saveCustomName(char* filename)
+{
+	// Address where player save data starts
+	uintptr_t saveDataBase = *(uintptr_t*)(imageBaseDxp + saveLocation);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(saveDataBase + 0x268);
+
+	// DEBUG: Address where the player name (might be) saved
+	uintptr_t namePtr = *(uintptr_t*)(carSaveBase + 0x20);
+
+	// Dump the default name to the file
+	dumpMemory(filename, namePtr, NAME_LENGTH);
+
+	return 1; // Success
+}
+
+
+// loadCustomName(filename: char*): Int
+// Given a filename, loads the default custom name
+// attribute from the file. If the file does not
+// exist, it is created using saveCustomName. 
+// Returns true on a successful execution.
+static int loadCustomName(char* filename)
+{
+	// Address where player save data starts
+	uintptr_t saveDataBase = *(uintptr_t*)(imageBaseDxp + saveLocation);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(saveDataBase + 0x268);
+
+	// DEBUG: Address where the player name (might be) saved
+	uintptr_t namePtr = *(uintptr_t*)(carSaveBase + 0x20);
+
+	// Custom title file does not exist
+	if (!(FileExists(filename)))
+	{
+		// Create the default file
+		saveCustomName(filename);
+	}
+
+	// Open the file with the file name
 	FILE* file = fopen(filename, "rb");
 
-	// File open OK
+	// File is opened successfully
 	if (file)
 	{
-		// Get the length of the file
-		fseek(file, 0, SEEK_END);
-		int fsize = ftell(file);
+		// Empty the title array
+		memset(name, 0x0, NAME_LENGTH);
 
-		// If the file has the right size
-		if (fsize == 0xFF)
-		{
-			// Reset to start of the file and read it into the car data variable
-			fseek(file, 0, SEEK_SET);
-			fread(carDataDxp, fsize, 1, file);
+		// Read the string content from the file
+		fread(name, 0x1, NAME_LENGTH, file);
 
-			// Dereference the memory location for the car save data
-			uintptr_t carSaveLocation = *(uintptr_t*)((*(uintptr_t*)(imageBaseDxp + saveLocation)) + 0x268);
+		// Empty the existing title content
+		memset((void*)namePtr, 0x0, NAME_LENGTH);
 
-			// memcpy((void*)(carSaveLocation + 0x00), carDataDxp + 0x00, 8); // Crash (Pointer)
-			memcpy((void*)(carSaveLocation + 0x08), carDataDxp + 0x08, 8); // ??
-			// memcpy((void*)(carSaveLocation + 0x10), carDataDxp + 0x10, 8); // Crash (Pointer)
-			memcpy((void*)(carSaveLocation + 0x18), carDataDxp + 0x18, 8); // ??
-			
-			// memcpy((void*)(carSaveLocation + 0x20), carDataDxp + 0x20, 8); // Crash (Pointer)
-			memcpy((void*)(carSaveLocation + 0x28), carDataDxp + 0x28, 8); // Region (0x28)
-			memcpy((void*)(carSaveLocation + 0x30), carDataDxp + 0x30, 8); // CarID (0x34)
-			// memcpy((void*)(carSaveLocation + 0x38), carDataDxp + 0x38, 4); // defaultColor
-			memcpy((void*)(carSaveLocation + 0x3C), carDataDxp + 0x3C, 4); // CustomColor (0x3C)
-
-			memcpy((void*)(carSaveLocation + 0x40), carDataDxp + 0x40, 8); // Rims (0x40), Rims Colour (0x44)
-			memcpy((void*)(carSaveLocation + 0x48), carDataDxp + 0x48, 8); // Aero (0x48), Hood (0x4C)
-			// memcpy((void*)(carSaveLocation + 0x50), carDataDxp + 0x50, 8); // Crash (Pointer)
-			memcpy((void*)(carSaveLocation + 0x58), carDataDxp + 0x58, 8); // Wing (0x58), Mirror (0x5C)
-
-			memcpy((void*)(carSaveLocation + 0x60), carDataDxp + 0x60, 8); // Sticker (0x60), Sticker Type (0x64)
-			// memcpy((void*)(carSaveLocation + 0x68), carDataDxp + 0x60, 8); // Crash (Pointer)
-			memcpy((void*)(carSaveLocation + 0x70), carDataDxp + 0x70, 8); // ?? 
-			memcpy((void*)(carSaveLocation + 0x78), carDataDxp + 0x78, 8); // ?? 
-
-			memcpy((void*)(carSaveLocation + 0x80), carDataDxp + 0x80, 8); // ??
-			memcpy((void*)(carSaveLocation + 0x88), carDataDxp + 0x88, 8); // Roof Sticker (0x88), Roof Sticker Type (0x8C)
-			memcpy((void*)(carSaveLocation + 0x90), carDataDxp + 0x90, 8); // Neon (0x90), Trunk (0x94)
-			memcpy((void*)(carSaveLocation + 0x98), carDataDxp + 0x98, 8); // Plate Frame (0x98)
-
-			memcpy((void*)(carSaveLocation + 0xA0), carDataDxp + 0xA0, 8); // Plate Number (0xA0), vinyl_body_challenge_prefecture_1~15 (0xA4)
-			memcpy((void*)(carSaveLocation + 0xA8), carDataDxp + 0xA8, 8); // vinyl_body_challenge_prefecture (0xA8), Power (0xAC)
-			memcpy((void*)(carSaveLocation + 0xB0), carDataDxp + 0xB0, 8); // Crash (Title Pointer) (B0)
-			memcpy((void*)(carSaveLocation + 0xB8), carDataDxp + 0xB8, 8); // Handling (0xB8), Rank (0xBC)
-
-			memcpy((void*)(carSaveLocation + 0xC0), carDataDxp + 0xC0, 8); // Window Sticker Toggle (0xC0)
-			// memcpy((void*)(carSaveLocation + 0xC8), carDataDxp + 0xC8, 8); // Crash (Pointer)
-			memcpy((void*)(carSaveLocation + 0xD0), carDataDxp + 0xD0, 8); // Window Sticker Value (0xD4)
-			memcpy((void*)(carSaveLocation + 0xD8), carDataDxp + 0xD8, 8); // ??
-
-			// memcpy((void*)(carSaveLocation + 0xE0), carDataDxp + 0xE0, 8); // Crash (Pointer)
-			// memcpy((void*)(carSaveLocation + 0xE8), carDataDxp + 0xE8, 8); // Crash (Pointer)
-			// memcpy((void*)(carSaveLocation + 0xF0), carDataDxp + 0xF0, 8); // Not tested
-			// memcpy((void*)(carSaveLocation + 0xF8), carDataDxp + 0xF8, 8); // Crash (Region Pointer) (F8)
-		}
-
-		// Disable loading
-		loadOkDxp = false;
+		// Write the new title to the string value
+		memcpy((void*)namePtr, name, NAME_LENGTH);
 
 		// Close the file
 		fclose(file);
 
 		// Success
-		return  1;
+		return 1;
 	}
 
-	// Failed
-	return 0;
-} 
+	return 1; // Success
+}
 
-// loadTitle(filepath: char*): Int
+// saveCustomTitle(filepath: char*): Int
+// Saves the custom title value to the current car's title, 
+// otherwise creates a default title.
+static int saveCustomTitle(char* filename)
+{
+	// Get the custom title from the config
+	std::string customTitle = config["General"]["CustomTitle"];
+
+	// If the custom title is blank
+	if (!customTitle.empty())
+	{
+		// Set to the default (Wangan Beginner)
+		customTitle = "Wangan Beginner";
+	}
+
+	// Open the file for the title
+	FILE* file = fopen(filename, "w+");
+
+	// File is opened successfully
+	if (file)
+	{
+		// Write the title string to the file
+		fprintf(file, "%s", customTitle.c_str());
+
+		// Close the file handle
+		fclose(file);
+	}
+	else // Failed to open file
+	{
+		// Failure
+		return 1;
+	}
+}
+
+// loadCustomTitle(filepath: char*): Int
 // Loads the title string from the title file for the given car.
 static int loadCustomTitle(char* filename)
 {
@@ -746,33 +1010,8 @@ static int loadCustomTitle(char* filename)
 	// Custom title file does not exist
 	if (!(FileExists(filename)))
 	{
-		// Get the custom title from the config
-		std::string customTitle = config["General"]["CustomTitle"];
-
-		// If the custom title is blank
-		if (!customTitle.empty())
-		{
-			// Set to the default (Wangan Beginner)
-			customTitle = "Wangan Beginner";
-		}
-
-		// Open the file for the title
-		FILE* file = fopen(filename, "w+");
-
-		// File is opened successfully
-		if (file)
-		{
-			// Write the title string to the file
-			fprintf(file, "%s", customTitle.c_str());
-
-			// Close the file handle
-			fclose(file);
-		}
-		else // Failed to open file
-		{
-			// Failure
-			return 1;
-		}
+		// Save the custom title
+		saveCustomTitle(filename);
 	}
 
 	// Open the file with the file name
@@ -836,6 +1075,94 @@ static int saveTitleFile(char* filename)
 }
 */
 
+// loadCarFile(filename: char*): Int
+// Given a filename, loads the data from
+// the car file into memory. 
+static int loadCarFile(char* filename)
+{
+	// Open the file with the filename
+	FILE* file = fopen(filename, "rb");
+
+	// File open OK
+	if (file)
+	{
+		// Get the length of the file
+		fseek(file, 0, SEEK_END);
+		int fsize = ftell(file);
+
+		// If the file has the right size
+		if (fsize == 0xFF)
+		{
+			// Reset to start of the file and read it into the car data variable
+			fseek(file, 0, SEEK_SET);
+			fread(carDataDxp, fsize, 1, file);
+
+			// Dereference the memory location for the car save data
+			uintptr_t carSaveLocation = *(uintptr_t*)((*(uintptr_t*)(imageBaseDxp + saveLocation)) + 0x268);
+
+			// Dev: Dump 100 bytes from the car save address every 30 seconds
+			// watchMemory("car_watch", carSaveLocation, 0x100, 30);
+
+			// memcpy((void*)(carSaveLocation + 0x00), carDataDxp + 0x00, 8); // Crash (Pointer)
+			// memcpy((void*)(carSaveLocation + 0x08), carDataDxp + 0x08, 8); // ??
+			// memcpy((void*)(carSaveLocation + 0x10), carDataDxp + 0x10, 8); // Crash (Pointer)
+			// memcpy((void*)(carSaveLocation + 0x18), carDataDxp + 0x18, 8); // ??
+
+			// memcpy((void*)(carSaveLocation + 0x20), carDataDxp + 0x20, 8); // Crash (Pointer)
+			memcpy((void*)(carSaveLocation + 0x28), carDataDxp + 0x28, 8); // Region (0x28)
+			memcpy((void*)(carSaveLocation + 0x30), carDataDxp + 0x30, 8); // CarID (0x34)
+			// memcpy((void*)(carSaveLocation + 0x38), carDataDxp + 0x38, 4); // Stock Colour (0x38)
+			memcpy((void*)(carSaveLocation + 0x3C), carDataDxp + 0x3C, 4); // CustomColor (0x3C)
+
+			memcpy((void*)(carSaveLocation + 0x40), carDataDxp + 0x40, 8); // Rims (0x40), Rims Colour (0x44)
+			memcpy((void*)(carSaveLocation + 0x48), carDataDxp + 0x48, 8); // Aero (0x48), Hood (0x4C)
+			// memcpy((void*)(carSaveLocation + 0x50), carDataDxp + 0x50, 8); // Crash (Pointer)
+			memcpy((void*)(carSaveLocation + 0x58), carDataDxp + 0x58, 8); // Wing (0x58), Mirror (0x5C)
+
+			memcpy((void*)(carSaveLocation + 0x60), carDataDxp + 0x60, 8); // Sticker (0x60), Sticker Type (0x64)
+			// memcpy((void*)(carSaveLocation + 0x68), carDataDxp + 0x60, 8); // Crash (Pointer)
+			memcpy((void*)(carSaveLocation + 0x70), carDataDxp + 0x70, 8); // ?? 
+			memcpy((void*)(carSaveLocation + 0x78), carDataDxp + 0x78, 8); // ?? 
+
+			memcpy((void*)(carSaveLocation + 0x80), carDataDxp + 0x80, 8); // ??
+			memcpy((void*)(carSaveLocation + 0x88), carDataDxp + 0x88, 8); // Roof Sticker (0x88), Roof Sticker Type (0x8C)
+			memcpy((void*)(carSaveLocation + 0x90), carDataDxp + 0x90, 8); // Neon (0x90), Trunk (0x94)
+			memcpy((void*)(carSaveLocation + 0x98), carDataDxp + 0x98, 8); // Plate Frame (0x98), Plate Frame Colour (0x9C) (??)
+
+			memcpy((void*)(carSaveLocation + 0xA0), carDataDxp + 0xA0, 8); // Plate Number (0xA0), vinyl_body_challenge_prefecture_1~15 (0xA4)
+			memcpy((void*)(carSaveLocation + 0xA8), carDataDxp + 0xA8, 8); // vinyl_body_challenge_prefecture (0xA8), Power (0xAC)
+			// memcpy((void*)(carSaveLocation + 0xB0), carDataDxp + 0xB0, 8); // Crash (Title Pointer) (B0)
+			memcpy((void*)(carSaveLocation + 0xB8), carDataDxp + 0xB8, 8); // Handling (0xB8), Rank (0xBC)
+
+			// Example for setting license plate number to 4 20:
+			// memset((void*)(carSaveLocation + 0xA1), 0x01, 0x1);
+			// memset((void*)(carSaveLocation + 0xA0), 0xA4, 0x1);
+
+			memcpy((void*)(carSaveLocation + 0xC0), carDataDxp + 0xC0, 8); // Window Sticker Toggle (0xC0)
+			// memcpy((void*)(carSaveLocation + 0xC8), carDataDxp + 0xC8, 8); // Crash (Pointer)
+			memcpy((void*)(carSaveLocation + 0xD0), carDataDxp + 0xD0, 8); // Window Sticker Value (0xD4)
+			memcpy((void*)(carSaveLocation + 0xD8), carDataDxp + 0xD8, 8); // Versus Market (0xDC)
+
+			// memcpy((void*)(carSaveLocation + 0xE0), carDataDxp + 0xE0, 8); // Crash (Pointer)
+			// memcpy((void*)(carSaveLocation + 0xE8), carDataDxp + 0xE8, 8); // Crash (Pointer)
+			memcpy((void*)(carSaveLocation + 0xF0), carDataDxp + 0xF0, 8); // ??
+			// memcpy((void*)(carSaveLocation + 0xF8), carDataDxp + 0xF8, 8); // Crash (Region Pointer) (F8)
+		}
+
+		// Disable loading
+		loadOkDxp = false;
+
+		// Close the file
+		fclose(file);
+
+		// Success
+		return  1;
+	}
+
+	// Failed
+	return 0;
+}
+
 // loadCarData(filepath: char*): Void
 // Given a filepath, attempts to load a 
 // car file (either custom.car or specific
@@ -869,6 +1196,9 @@ static int loadCarData(char * filepath)
 		// Get the path to the title file
 		sprintf(titleFileNameDxp, "%s\\custom.title", carPath);
 
+		// Get the path to the name file
+		sprintf(nameFileNameDxp, "%s\\custom.name", carPath);
+
 		// Load the custom car file
 		loadCarFile(carFileNameDxp);
 
@@ -883,6 +1213,9 @@ static int loadCarData(char * filepath)
 		// Get the path to the specific car file
 		sprintf(carFileNameDxp, "%s\\%08X.car", carPath, selectedCarCodeDxp);
 
+		// Get the path to the name file
+		sprintf(nameFileNameDxp, "%s\\%08X.name", carPath, selectedCarCodeDxp);
+
 		// Get the path to the specific car title file
 		sprintf(titleFileNameDxp, "%s\\%08X.title", carPath, selectedCarCodeDxp);
 
@@ -894,12 +1227,11 @@ static int loadCarData(char * filepath)
 		}
 	}
 
-	// If the use custom title switch is set
-	if (ToBool(config["General"]["Use Custom Title"]))
-	{
-		// Load the custom title file
-		loadCustomTitle(titleFileNameDxp);
-	}
+	// Load the custom title file
+	loadCustomTitle(titleFileNameDxp);
+
+	// Load the custom name file
+	loadCustomName(nameFileNameDxp);
 
 	// If the force full tune switch is set
 	if (ToBool(config["Tune"]["Force Full Tune"]))
@@ -1191,7 +1523,7 @@ static int saveMileData(char* filepath)
 }
 
 // Credits to chery vtec tuning club for figuring out star loading / saving
-static int saveStarData(char* filepath)
+static int saveVersusData(char* filepath)
 {
 	// Star path saving
 	char starPath[0xFF];
@@ -1203,48 +1535,57 @@ static int saveStarData(char* filepath)
 	strcpy(starPath, filepath);
 
 	// Append the mileage filename to the string
-	strcat(starPath, "\\stars.bin");
+	strcat(starPath, "\\openversus.sav");
 
 	// Clear star data memory
-	memset(starDataDxp, 0, 0x40);
+	// memset(versusDataDxp, 0, 0x200);
 
 	// Save Star Data
 
-	// Dereference the star pointer
-	uintptr_t starBase = *(uintptr_t*)((*(uintptr_t*)(imageBaseDxp + saveLocation)) + 0x110);
+	// Dereference the versus pointer
+	// Add 0x200 to it, because all of the versus stuff is after the first 0x200 bytes
+	uintptr_t starBase = *(uintptr_t*)((*(uintptr_t*)(imageBaseDxp + saveLocation)) + 0x110) + 0x200;
 
 	// Dumps first 2 bytes from star pointer
-	memcpy(starDataDxp + 0x00, (void*)(starBase + 0x248), 0x4);
+	// memcpy(versusDataDxp + 0x00, (void*)(starBase + 0x248), 0x4);
 	
 	// Dumps medal offsets from star pointer, 16 bytes
-	memcpy(starDataDxp + 0x04, (void*)(starBase + 0x254), 0x10);
+	// memcpy(versusDataDxp + 0x04, (void*)(starBase + 0x254), 0x10);
 
 	// Dump the contents of the star data array to the file
-	writeDump(starPath, starDataDxp, sizeof(starDataDxp));
+	// writeDump(starPath, versusDataDxp, sizeof(versusDataDxp));
+	dumpMemory(starPath, starBase, 0x100);
 
 	// Success
 	return 1;
 }
 
-static int loadStarData(char* filepath)
+static int loadVersusData(char* filepath)
 {
 	// Star path loading
-	char starPath[0xFF];
+	char versusPath[0xFF];
 
 	// Set the storyPath memory to zero
-	memset(starPath, 0, 0xFF);
+	memset(versusPath, 0, 0xFF);
 
 	// Copy the file path to the stars path
-	strcpy(starPath, filepath);
+	strcpy(versusPath, filepath);
 
 	// Append the mileage filename to the string
-	strcat(starPath, "\\stars.bin");
+	strcat(versusPath, "\\openversus.sav");
 
 	// Clear star data memory
-	memset(starDataDxp, 0, 0x40);
+	memset(versusDataDxp, 0, 0x100);
 
 	// Open the star binary file
-	FILE* starFile = fopen(starPath, "rb");
+	FILE* starFile = fopen(versusPath, "rb");
+
+	// Dereference the versus pointer in the game memory
+	// Add 0x200 to it, because all of the versus stuff is after the first 0x200 bytes
+	uintptr_t starBase = *(uintptr_t*)((*(uintptr_t*)(imageBaseDxp + saveLocation)) + 0x110) + 0x200;
+
+	// Dev: Dump 100 bytes from the car save address every 30 seconds
+	// watchMemory("versus_watch", starBase + 0x200, 0x100, 30);
 
 	// If the file opened successfully
 	if (starFile)
@@ -1252,22 +1593,40 @@ static int loadStarData(char* filepath)
 		// If the file size is correct
 		fseek(starFile, 0, SEEK_END);
 		int starSize = ftell(starFile);
-		if (starSize == 0x40)
+		if (starSize == 0x100)
 		{
 			// Reset the file pointer to the start
 			fseek(starFile, 0, SEEK_SET);
 
 			// Read all of the contents into the array
-			fread(starDataDxp, starSize, 1, starFile);
-
-			// Dereference the star pointer in the game memory
-			uintptr_t starBase = *(uintptr_t*)((*(uintptr_t*)(imageBaseDxp + saveLocation)) + 0x110);
+			fread(versusDataDxp, starSize, 1, starFile);
 
 			// Dumps first 2 bytes from star pointer
-			memcpy((void*)(starBase + 0x248), starDataDxp + 0x00, 0x4);
+			// memcpy((void*)(starBase + 0x248), versusDataDxp + 0x00, 0x4);
 
 			// Dumps medal offsets from star pointer, 16 bytes
-			memcpy((void*)(starBase + 0x254), starDataDxp + 0x04, 0x10);
+			// memcpy((void*)(starBase + 0x254), versusDataDxp + 0x04, 0x10);
+
+			// Load the data from the versus region
+
+			memcpy((void*)(starBase + 0x10), versusDataDxp + 0x10, 0x8); // ???
+			memcpy((void*)(starBase + 0x18), versusDataDxp + 0x18, 0x8); // ???
+			memcpy((void*)(starBase + 0x20), versusDataDxp + 0x20, 0x8); // Player Count (0x24)
+			memcpy((void*)(starBase + 0x28), versusDataDxp + 0x28, 0x8); // ???
+			
+			memcpy((void*)(starBase + 0x30), versusDataDxp + 0x30, 0x8); // ???
+			memcpy((void*)(starBase + 0x38), versusDataDxp + 0x38, 0x8); // Unknown 0x1 (0x8)
+			memcpy((void*)(starBase + 0x40), versusDataDxp + 0x40, 0x8); // Win Streak (??)
+			memcpy((void*)(starBase + 0x48), versusDataDxp + 0x48, 0x8); // Stars (0x48), ??? (0x4C)
+			
+			memcpy((void*)(starBase + 0x50), versusDataDxp + 0x50, 0x8); // Gold Medals (0x54) ??
+			memcpy((void*)(starBase + 0x58), versusDataDxp + 0x58, 0x8); // Silver Medals (0x58), Bronze Medals (0x5C) ??
+			memcpy((void*)(starBase + 0x60), versusDataDxp + 0x60, 0x8); // Black Medals (0x60)
+			memcpy((void*)(starBase + 0x68), versusDataDxp + 0x68, 0x8); // ??
+			
+			memcpy((void*)(starBase + 0x70), versusDataDxp + 0x70, 0x8); // ??
+			memcpy((void*)(starBase + 0x78), versusDataDxp + 0x78, 0x8); // ??
+			memcpy((void*)(starBase + 0x80), versusDataDxp + 0x80, 0x8); // ??
 
 			// Close the stars file
 			fclose(starFile);
@@ -1343,7 +1702,7 @@ static int loadGameData()
 	std::this_thread::sleep_for(std::chrono::seconds(30));
 
 	// Load the stars save file
-	loadStarData(loadPath);
+	loadVersusData(loadPath);
 
 	// Success
 	return 1;
@@ -1411,7 +1770,7 @@ static int SaveGameData()
 	saveMileData(savePath);
 
 	// Load the miles save file
-	saveStarData(savePath);
+	saveVersusData(savePath);
 
 	// Disable saving
 	saveOk = false;
@@ -1791,7 +2150,7 @@ static InitFunction Wmmt5Func([]()
 		strcpy(customNameDxp, customName.c_str());
 
 		// Create the spam custom name thread
-		CreateThread(0, 0, spamCustomNameDxp, 0, 0, 0);
+		// CreateThread(0, 0, spamCustomNameDxp, 0, 0, 0);
 	}
 
 	// Save story stuff (only 05)
