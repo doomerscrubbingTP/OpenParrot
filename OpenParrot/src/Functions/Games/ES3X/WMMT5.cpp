@@ -670,7 +670,7 @@ static int loadCarFile(char* filename)
 			uintptr_t carSaveLocation = *(uintptr_t*)((*(uintptr_t*)(imageBase + saveLocation)) + 0x240);
 
 			memcpy((void*)(carSaveLocation + 0x20), carData + 0x20, 0x8); // Plate Region (0x20)
-			memcpy((void*)(carSaveLocation + 0x28), carData + 0x28, 0x8); // Car ID (0x0C)
+			memcpy((void*)(carSaveLocation + 0x28), carData + 0x28, 0x8); // Car ID (0x2C)
 			// memcpy((void*)(carSaveLocation + 0x30), carData + 0x30, 4); // Stock Colour (0x30)
 			memcpy((void*)(carSaveLocation + 0x34), carData + 0x34, 0x4); // Custom Colour (0x34)
 			memcpy((void*)(carSaveLocation + 0x38), carData + 0x38, 0x8); // Rims Type (0x38), Rims Colour (0x3C)
@@ -678,12 +678,12 @@ static int loadCarFile(char* filename)
 			memcpy((void*)(carSaveLocation + 0x40), carData + 0x40, 0x8); // Aero Type (0x40), Hood Type (0x44)
 			// memcpy((void*)(carSaveLocation + 0x48), carData + 0x48, 0x8); // Crash (Pointer)
 			memcpy((void*)(carSaveLocation + 0x50), carData + 0x50, 0x8); // Wing Type (0x50), Mirror Type (0x54)
-			memcpy((void*)(carSaveLocation + 0x58), carData + 0x58, 0x8); // Body Sticker Type (0x58), Variant (0x5C)
+			memcpy((void*)(carSaveLocation + 0x58), carData + 0x58, 0x8); // Body Sticker Type (0x58), Japan Sticker Type (0x59), Variant (0x5C)
 
 			// memcpy((void*)(carSaveLocation + 0x60), carData + 0x60, 8); // Crash (Pointer)
 			memcpy((void*)(carSaveLocation + 0x68), carData + 0x68, 0x8); // ??
 			memcpy((void*)(carSaveLocation + 0x70), carData + 0x70, 0x8); // ??
-			memcpy((void*)(carSaveLocation + 0x78), carData + 0x78, 0x8); // Neon Type
+			memcpy((void*)(carSaveLocation + 0x78), carData + 0x78, 0x8); // Neon Type (0x7C)
 
 			// Example for setting license plate number to 4 20:
 			// memset((void*)(carSaveLocation + 0x8D), 0x01, 0x1);

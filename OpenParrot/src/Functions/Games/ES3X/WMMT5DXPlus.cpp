@@ -379,11 +379,18 @@ bool WINAPI Hook_SetSystemTime(SYSTEMTIME* in)
 	return TRUE;
 }
 
+// Maximum sticker length (32 bytes, 8 characters)
+#define STICKER_LENGTH 0x20
+
 // Maximum title length (16 Characters)
 #define TITLE_LENGTH 0x10
 
 // Maximum name length (16 bytes, 5 characters)
 #define NAME_LENGTH 0x10
+
+
+// Sticker string storage
+char sticker[STICKER_LENGTH];
 
 // Title string storage
 char title[TITLE_LENGTH];
@@ -417,6 +424,9 @@ unsigned char carDataDxp[0xFF];
 
 // Car filename string
 char carFileNameDxp[0xFF];
+
+// Sticker filename string
+char stickerFileNameDxp[0xFF];
 
 // Title filename string
 char titleFileNameDxp[0xFF];
@@ -722,6 +732,39 @@ static void watchMemory(char* filename, uintptr_t memory, size_t size, int delay
 	CreateThread(0, 0, watchMemoryThread, 0, 0, 0);
 }
 
+static int loadCustomSettings(char* filename)
+{
+	// Address where player save data starts
+	uintptr_t saveDataBase = *(uintptr_t*)(imageBaseDxp + saveLocation);
+
+	// Address where the settings (??) save data starts)
+	uintptr_t settingsSaveBase = *(uintptr_t*)(saveDataBase + 0x288);
+
+	// Dump the settings region :)
+	watchMemory("settings_dump", settingsSaveBase, 0x2000, 15);
+
+	return 1; // Success
+}
+
+// saveCustomName(filename: char*): Int
+// Given a filename, saves the default custom name
+// attribute to the file. Returns true on a successful execution.
+static int saveCustomSticker(char* filename)
+{
+	// Default (empty) array for empty sticker text
+	unsigned char windowText[STICKER_LENGTH] = {
+		0xF, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+		0xF, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+		0xF, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+		0xF, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
+	};
+
+	// Dump the default name to the file
+	writeDump(filename, windowText, STICKER_LENGTH);
+
+	return 1; // Success
+}
+
 static int loadCustomSticker(char* filename)
 {
 	// Address where player save data starts
@@ -733,160 +776,34 @@ static int loadCustomSticker(char* filename)
 	// DEBUG: Address where the window sticker (might be) saved
 	uintptr_t stickerPtr = *(uintptr_t*)(carSaveBase + 0xC8);
 
-	dumpMemory("stickerptr_pre.bin", stickerPtr, 0x20);
+	// Custom title file does not exist
+	if (!(FileExists(filename)))
+	{
+		// Create the default file
+		saveCustomSticker(filename);
+	}
 
-	// G
-	memset((void*)(stickerPtr + 0x0), 0xEF, 0x1);
-	memset((void*)(stickerPtr + 0x1), 0xBC, 0x1);
-	memset((void*)(stickerPtr + 0x2), 0xA7, 0x1);
+	// Open the file with the file name
+	FILE* file = fopen(filename, "rb");
 
-	// U
-	memset((void*)(stickerPtr + 0x3), 0xEF, 0x1);
-	memset((void*)(stickerPtr + 0x4), 0xBC, 0x1);
-	memset((void*)(stickerPtr + 0x5), 0xB5, 0x1);
+	// File is opened successfully
+	if (file)
+	{
+		// Empty the title array
+		memset(sticker, 0x0, STICKER_LENGTH);
 
-	// E
-	memset((void*)(stickerPtr + 0x6), 0xEF, 0x1);
-	memset((void*)(stickerPtr + 0x7), 0xBC, 0x1);
-	memset((void*)(stickerPtr + 0x8), 0xA5, 0x1);
+		// Read the string content from the file
+		fread(sticker, 0x1, STICKER_LENGTH, file);
 
-	// S
-	memset((void*)(stickerPtr + 0x9), 0xEF, 0x1);
-	memset((void*)(stickerPtr + 0xA), 0xBC, 0x1);
-	memset((void*)(stickerPtr + 0xB), 0xB3, 0x1);
+		// Write the new title to the string value
+		memcpy((void*)stickerPtr, sticker, STICKER_LENGTH);
 
-	// T
-	memset((void*)(stickerPtr + 0xC), 0xEF, 0x1);
-	memset((void*)(stickerPtr + 0xD), 0xBC, 0x1);
-	memset((void*)(stickerPtr + 0xE), 0xB4, 0x1);
-
-	dumpMemory("stickerptr_post.bin", stickerPtr, 0x20);
+		// Close the file
+		fclose(file);
+	}
 
 	return 1; // Success
 }
-
-/*
-// Given a character, returns an integer
-// which represents the full-width ascii
-// for that character. If the character
-// does not have a valid full width 
-// equivalent, returns zero.
-unsigned int getFullWidthChar(char c)
-{
-	// Table of full-width ascii values
-	// Index is the ascii value of the character
-	// minus 0x21 (the first valid full-width ascii character)
-	unsigned int table[] = {
-
-		0xEFBC81, // !
-		0xEFBC82, // "
-		0xEFBC83, // #
-		0xEFBC84, // $
-		0xEFBC85, // %
-		0xEFBC86, // &
-		0xEFBC87, // '
-		0xEFBC88, // (
-		0xEFBC89, // )
-		0xEFBC8A, // *
-		0xEFBC8B, // +
-		0xEFBC8C, // ,
-		0xEFBC8D, // -
-		0xEFBC8E, // .
-		0xEFBC8F, // /
-		0xEFBC90, // 0
-		0xEFBC91, // 1
-		0xEFBC92, // 2
-		0xEFBC93, // 3
-		0xEFBC94, // 4
-		0xEFBC95, // 5
-		0xEFBC96, // 6
-		0xEFBC97, // 7
-		0xEFBC98, // 8
-		0xEFBC99, // 9
-		0xEFBC9A, // :
-		0xEFBC9B, // ;
-		0xEFBC9C, // <
-		0xEFBC9D, // =
-		0xEFBC9E, // >
-		0xEFBC9F, // ?
-		0xEFBCA0, // @
-		0xEFBCA1, // A
-		0xEFBCA2, // B
-		0xEFBCA3, // C
-		0xEFBCA4, // D
-		0xEFBCA5, // E
-		0xEFBCA6, // F
-		0xEFBCA7, // G
-		0xEFBCA8, // H
-		0xEFBCA9, // I
-		0xEFBCAA, // K
-		0xEFBCAB, // L
-		0xEFBCAC, // M
-		0xEFBCAD, // N
-		0xEFBCAE, // O
-		0xEFBCAF, // P
-		0xEFBCB0, // Q
-		0xEFBCB1, // R
-		0xEFBCB2, // S
-		0xEFBCB3, // T
-		0xEFBCB4, // U
-		0xEFBCB5, // V
-		0xEFBCB6, // W
-		0xEFBCB7, // X
-		0xEFBCB8, // Y
-		0xEFBCB9, // Z
-		0xEFBCBA, // [
-		0xEFBCBB, // '\'
-		0xEFBCBC, // ]
-		0xEFBCBD, // ^
-		0xEFBCBE, // _
-		0xEFBD80, // `
-		0xEFBD81, // a
-		0xEFBD82, // b
-		0xEFBD83, // c
-		0xEFBD84, // d
-		0xEFBD85, // e
-		0xEFBD86, // f
-		0xEFBD87, // g
-		0xEFBD88, // h
-		0xEFBD89, // i
-		0xEFBD8A, // j
-		0xEFBD8B, // k
-		0xEFBD8C, // l
-		0xEFBD8D, // m
-		0xEFBD8E, // n
-		0xEFBD8F, // o
-		0xEFBD90, // p
-		0xEFBD91, // q
-		0xEFBD92, // r
-		0xEFBD93, // s
-		0xEFBD94, // t
-		0xEFBD95, // u
-		0xEFBD96, // v
-		0xEFBD97, // w
-		0xEFBD98, // x
-		0xEFBD99, // y
-		0xEFBD9A, // z
-		0xEFBD9B, // {
-		0xEFBD9C, // |
-		0xEFBD9D, // }
-		0xEFBD9E, // ~
-
-	};
-
-	// If c is at least 21, but not out of bounds
-	if (c > 0x20 && c < sizeof(table)/sizeof(*table))
-	{
-		// Return the index for the character in the table
-		return table[(c-0x20)];
-	}
-	else // Character is not in the table
-	{
-		// Return zero
-		return 0;
-	}
-}
-*/
 
 // saveCustomName(filename: char*): Int
 // Given a filename, saves the default custom name
@@ -952,9 +869,6 @@ static int loadCustomName(char* filename)
 
 		// Close the file
 		fclose(file);
-
-		// Success
-		return 1;
 	}
 
 	return 1; // Success
@@ -1101,7 +1015,7 @@ static int loadCarFile(char* filename)
 			uintptr_t carSaveLocation = *(uintptr_t*)((*(uintptr_t*)(imageBaseDxp + saveLocation)) + 0x268);
 
 			// Dev: Dump 100 bytes from the car save address every 30 seconds
-			// watchMemory("car_watch", carSaveLocation, 0x100, 30);
+			watchMemory("car_watch", carSaveLocation, 0x300, 30);
 
 			// memcpy((void*)(carSaveLocation + 0x00), carDataDxp + 0x00, 8); // Crash (Pointer)
 			// memcpy((void*)(carSaveLocation + 0x08), carDataDxp + 0x08, 8); // ??
@@ -1127,7 +1041,7 @@ static int loadCarFile(char* filename)
 			memcpy((void*)(carSaveLocation + 0x80), carDataDxp + 0x80, 8); // ??
 			memcpy((void*)(carSaveLocation + 0x88), carDataDxp + 0x88, 8); // Roof Sticker (0x88), Roof Sticker Type (0x8C)
 			memcpy((void*)(carSaveLocation + 0x90), carDataDxp + 0x90, 8); // Neon (0x90), Trunk (0x94)
-			memcpy((void*)(carSaveLocation + 0x98), carDataDxp + 0x98, 8); // Plate Frame (0x98), Plate Frame Colour (0x9C) (??)
+			memcpy((void*)(carSaveLocation + 0x98), carDataDxp + 0x98, 8); // Plate Frame (0x98), 1SP-3SP Frame (0x99-9B), Plate Frame Colour (0x9C) (??)
 
 			memcpy((void*)(carSaveLocation + 0xA0), carDataDxp + 0xA0, 8); // Plate Number (0xA0), vinyl_body_challenge_prefecture_1~15 (0xA4)
 			memcpy((void*)(carSaveLocation + 0xA8), carDataDxp + 0xA8, 8); // vinyl_body_challenge_prefecture (0xA8), Power (0xAC)
@@ -1219,6 +1133,9 @@ static int loadCarData(char * filepath)
 		// Get the path to the specific car title file
 		sprintf(titleFileNameDxp, "%s\\%08X.title", carPath, selectedCarCodeDxp);
 
+		// Get the path to the specific car title file
+		sprintf(stickerFileNameDxp, "%s\\%08X.sticker", carPath, selectedCarCodeDxp);
+
 		// If the specific car file exists
 		if (FileExists(carFileNameDxp))
 		{
@@ -1232,6 +1149,9 @@ static int loadCarData(char * filepath)
 
 	// Load the custom name file
 	loadCustomName(nameFileNameDxp);
+
+	// Load the custom sticker file
+	loadCustomSticker(stickerFileNameDxp);
 
 	// If the force full tune switch is set
 	if (ToBool(config["Tune"]["Force Full Tune"]))
@@ -1649,7 +1569,6 @@ static int loadGameData()
 	memset(loadPath, 0, 0xFF);
 
 	// Write the '.' into the load path
-	// sprintf(loadPath, ".\\SaveData");
 	sprintf(loadPath, ".");
 
 	// Get the path to the selected car
