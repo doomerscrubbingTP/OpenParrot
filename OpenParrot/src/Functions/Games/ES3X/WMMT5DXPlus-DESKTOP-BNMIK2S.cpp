@@ -3,7 +3,6 @@
 #include "Functions/Global.h"
 #include <filesystem>
 #include <iostream>
-#include <iomanip>
 #include <cstdint>
 #include <fstream>
 #include "MinHook.h"
@@ -11,8 +10,6 @@
 #include <chrono>
 #include <thread>
 #include <format>
-#include <ctime>
-
 #ifdef _M_AMD64
 #pragma optimize("", off)
 #pragma comment(lib, "Ws2_32.lib")
@@ -333,35 +330,35 @@ unsigned char dxpterminalPackage6_Event2P[139] = {
 #define HASP_STATUS_OK 0
 unsigned int hook_hasp_login(int feature_id, void* vendor_code, int hasp_handle) {
 #ifdef _DEBUG
-	OutputDebugStringA("hasp_login");
+	OutputDebugStringA("hasp_login\n");
 #endif
 	return HASP_STATUS_OK;
 }
 
 unsigned int hook_hasp_logout(int hasp_handle) {
 #ifdef _DEBUG
-	OutputDebugStringA("hasp_logout");
+	OutputDebugStringA("hasp_logout\n");
 #endif
 	return HASP_STATUS_OK;
 }
 
 unsigned int hook_hasp_encrypt(int hasp_handle, unsigned char* buffer, unsigned int buffer_size) {
 #ifdef _DEBUG
-	OutputDebugStringA("hasp_encrypt");
+	OutputDebugStringA("hasp_encrypt\n");
 #endif
 	return HASP_STATUS_OK;
 }
 
 unsigned int hook_hasp_decrypt(int hasp_handle, unsigned char* buffer, unsigned int buffer_size) {
 #ifdef _DEBUG
-	OutputDebugStringA("hasp_decrypt");
+	OutputDebugStringA("hasp_decrypt\n");
 #endif
 	return HASP_STATUS_OK;
 }
 
 unsigned int hook_hasp_get_size(int hasp_handle, int hasp_fileid, unsigned int* hasp_size) {
 #ifdef _DEBUG
-	OutputDebugStringA("hasp_get_size");
+	OutputDebugStringA("hasp_get_size\n");
 #endif
 	*hasp_size = 0xD40; // Max addressable size by the game... absmax is 4k
 	return HASP_STATUS_OK;
@@ -369,7 +366,7 @@ unsigned int hook_hasp_get_size(int hasp_handle, int hasp_fileid, unsigned int* 
 
 unsigned int hook_hasp_read(int hasp_handle, int hasp_fileid, unsigned int offset, unsigned int length, unsigned char* buffer) {
 #ifdef _DEBUG
-	OutputDebugStringA("hasp_read");
+	OutputDebugStringA("hasp_read\n");
 #endif
 	memcpy(buffer, hasp_buffer + offset, length);
 	return HASP_STATUS_OK;
@@ -377,7 +374,7 @@ unsigned int hook_hasp_read(int hasp_handle, int hasp_fileid, unsigned int offse
 
 unsigned int hook_hasp_write(int hasp_handle, int hasp_fileid, unsigned int offset, unsigned int length, unsigned char* buffer) {
 #ifdef _DEBUG
-	OutputDebugStringA("hasp_write");
+	OutputDebugStringA("hasp_write\n");
 #endif
 	return HASP_STATUS_OK;
 }
@@ -391,27 +388,7 @@ bool WINAPI Hook_SetSystemTime(SYSTEMTIME* in)
 	return TRUE;
 }
 
-// **** Save Data Filenames ****
-
-// Settings data filename
-#define SETTINGS_FILENAME "opensettings.sav"
-
-// Story data filename
-#define STORY_FILENAME "openprogress.sav"
-
-// Versus data filename
-#define VERSUS_FILENAME "openversus.sav"
-
-// Mileeage data filename
-#define MILE_FILENAME "openmileage.sav"
-
-// Folder path for cars
-#define CAR_FILEPATH "OpenParrot_Cars"
-
 // **** Data Region Sizes ****
-
-// Settings region load/save size
-#define SETTINGS_DATA_SIZE 0x40
 
 // Versus region load/save size
 #define VERSUS_DATA_SIZE 0x100
@@ -441,17 +418,14 @@ bool WINAPI Hook_SetSystemTime(SYSTEMTIME* in)
 // Save Data Location Constant
 #define SAVE_OFFSET 0x1F7D578
 
-// Settings Data Offset (Within Save Data Region)
-#define SETTINGS_OFFSET 0x400
-
-// Story Data Offset (Within Save Data Region)
-#define STORY_OFFSET 0x108
-
 // Mile Data Offset (Within Save Data Region)
 #define MILE_OFFSET 0x280
 
 // Car Data Offset (Within Save Data Region)
 #define CAR_OFFSET 0x268
+
+// Story Data Offset (Within Save Data Region)
+#define STORY_OFFSET 0x108
 
 // *** Unsigned Char (Memory Storage) Objects ***
 
@@ -491,9 +465,6 @@ static int SaveOk()
 	return 1;
 }
 
-// Functions in this are are only used in debug mode
-
-#ifdef _DEBUG
 // ******************************************** //
 // ************ Development  Tools ************ //
 // ******************************************** //
@@ -502,7 +473,7 @@ static int SaveOk()
 // Given a filename string and a message string, appends
 // the message to the given file. Returns a status code 
 // of 0 if successful, and a code of 1 if failed.
-static int writeMessage(std::string filename, std::string message, bool timestamp = false, bool newline = false)
+static int writeMessage(std::string filename, std::string message)
 {
 	// Log file to write to
 	std::ofstream eventLog;
@@ -513,26 +484,8 @@ static int writeMessage(std::string filename, std::string message, bool timestam
 	// File open success
 	if (eventLog.is_open())
 	{
-		// If timestamp switch is applied
-		if (timestamp)
-		{
-			// Get the current time
-			auto t = std::time(nullptr);
-			auto tm = *std::localtime(&t);
-
-			// Add the timestamp to the message
-			eventLog << "[" << std::put_time(&tm, "%d-%m-%Y %H-%M-%S") << "] ";
-		}
-
 		// Write the message to the file
 		eventLog << message;
-
-		// Newline switch applied
-		if (newline)
-		{
-			// Add the newline to the message
-			eventLog << "\n";
-		}
 
 		// Close the log file handle
 		eventLog.close();
@@ -547,6 +500,9 @@ static int writeMessage(std::string filename, std::string message, bool timestam
 	}
 }
 
+// Functions in this are are only used in debug mode
+
+#ifdef _DEBUG
 // Debugging event log file
 static std::string logfile = "wmmt5dxp_errors.txt";
 
@@ -554,8 +510,18 @@ static std::string logfile = "wmmt5dxp_errors.txt";
 // Given a message and a log level, writes a 
 static int writeLog(std::string message)
 {
-	// Write to the log file (with timestamp and newline)
-	return writeMessage(logfile, message, true, true);
+#include <iostream>
+#include <iomanip>
+#include <ctime>
+
+	int main()
+	{
+		auto t = std::time(nullptr);
+		auto tm = *std::localtime(&t);
+		std::cout << std::put_time(&tm, "%d-%m-%Y %H-%M-%S") << std::endl;
+	}
+	// Write the message to the log file
+	return writeMessage(logfile, message);
 }
 
 // writeMemory(memory: uintptr_t, value: unsigned char, size: size_t, force: bool): Void
@@ -598,7 +564,7 @@ static void writeMemory(uintptr_t memory, int value, size_t size, bool force = f
 static int writeDump(char* filename, unsigned char* data, size_t size)
 {
 #ifdef _DEBUG
-	writeLog("Call to writeDump...");
+	writeLog("Call to writeDump...\n");
 #endif
 
 	// Open the file with the provided filename
@@ -621,7 +587,7 @@ static int writeDump(char* filename, unsigned char* data, size_t size)
 	}
 
 #ifdef _DEBUG
-	status ? writeLog("writeDump failed.") : writeLog("writeDump success.");
+	status ? writeLog("writeDump failed.\n") : writeLog("writeDump success.\n");
 #endif
 
 	// Return success code
@@ -635,7 +601,7 @@ static int writeDump(char* filename, unsigned char* data, size_t size)
 static int dumpMemory(char* filename, uintptr_t memory, size_t size)
 {
 #ifdef _DEBUG
-	writeLog("Call to dumpMemory...");
+	writeLog("Call to dumpMemory...\n");
 #endif
 
 	// Create the array to dump the memory data to
@@ -661,7 +627,7 @@ static int dumpMemory(char* filename, uintptr_t memory, size_t size)
 	}
 
 #ifdef _DEBUG
-	status ? writeLog("dumpMemory failed.") : writeLog("dumpMemory success.");
+	status ? writeLog("dumpMemory failed.\n") : writeLog("dumpMemory success.\n");
 #endif
 
 	return status;
@@ -677,7 +643,7 @@ static size_t dumpMemorySize;
 // dumpMemoryThread(pArguments: void*): DWORD WINAPI
 static DWORD WINAPI watchMemoryThread(void* pArguments)
 {
-	writeLog("Call to watchMemoryThread...");
+	writeLog("Call to watchMemoryThread...\n");
 
 	// File to dump the current memory to
 	char path[FILENAME_MAX];
@@ -704,7 +670,7 @@ static DWORD WINAPI watchMemoryThread(void* pArguments)
 		i++;
 	}
 
-	writeLog("watchMemoryThread done.");
+	writeLog("watchMemoryThread done.\n");
 }
 
 // watchMemory(char * filename, uintptr_t memory, size_t size, int delay)
@@ -715,7 +681,7 @@ static DWORD WINAPI watchMemoryThread(void* pArguments)
 // can be running at any time.
 static void watchMemory(char* filename, uintptr_t memory, size_t size, int delay)
 {
-	writeLog("Call to watchMemory...");
+	writeLog("Call to watchMemory...\n");
 
 	// Update the dumpMemoryFolder variable
 	dumpMemoryFolder = std::string(filename);
@@ -732,67 +698,7 @@ static void watchMemory(char* filename, uintptr_t memory, size_t size, int delay
 	// Start the memory dump thread
 	CreateThread(0, 0, watchMemoryThread, 0, 0, 0);
 
-	writeLog("watchMemory done.");
-}
-#endif
-
-#ifdef _DEBUG
-static int dumpPointerMemory()
-{
-	writeLog("Call to dumpPointerMemory...");
-
-	uintptr_t saveOffset = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
-
-	/*
-	dumpMemory("0x00.bin", *(uintptr_t*)(saveOffset + 0x0), 0x2000);
-	dumpMemory("0x08.bin", *(uintptr_t*)(saveOffset + 0x8), 0x2000);
-	dumpMemory("0x18.bin", *(uintptr_t*)(saveOffset + 0x18), 0x2000);
-	dumpMemory("0x20.bin", *(uintptr_t*)(saveOffset + 0x20), 0x2000);
-	dumpMemory("0x30.bin", *(uintptr_t*)(saveOffset + 0x30), 0x2000);
-	dumpMemory("0x68.bin", *(uintptr_t*)(saveOffset + 0x68), 0x2000);
-	dumpMemory("0xC0.bin", *(uintptr_t*)(saveOffset + 0xC0), 0x2000);
-	dumpMemory("0xC8.bin", *(uintptr_t*)(saveOffset + 0xC8), 0x2000);
-	dumpMemory("0xD8.bin", *(uintptr_t*)(saveOffset + 0xD8), 0x2000);
-	dumpMemory("0xE0.bin", *(uintptr_t*)(saveOffset + 0xE0), 0x2000);
-	dumpMemory("0xF0.bin", *(uintptr_t*)(saveOffset + 0xF0), 0x2000);
-	dumpMemory("0xF8.bin", *(uintptr_t*)(saveOffset + 0xF8), 0x2000);
-	dumpMemory("0x108.bin", *(uintptr_t*)(saveOffset + 0x108), 0x2000);
-	dumpMemory("0x110.bin", *(uintptr_t*)(saveOffset + 0x110), 0x2000);
-	dumpMemory("0x158.bin", *(uintptr_t*)(saveOffset + 0x158), 0x2000);
-	dumpMemory("0x160.bin", *(uintptr_t*)(saveOffset + 0x160), 0x2000);
-	dumpMemory("0x170.bin", *(uintptr_t*)(saveOffset + 0x170), 0x2000);
-	dumpMemory("0x178.bin", *(uintptr_t*)(saveOffset + 0x178), 0x2000);
-	// dumpMemory("0x198.bin", *(uintptr_t*)(saveOffset + 0x198), 0x2000); not a ptr
-	dumpMemory("0x1A8.bin", *(uintptr_t*)(saveOffset + 0x1A8), 0x2000);
-	dumpMemory("0x1B0.bin", *(uintptr_t*)(saveOffset + 0x1B0), 0x2000);
-	dumpMemory("0x218.bin", *(uintptr_t*)(saveOffset + 0x218), 0x2000);
-	dumpMemory("0x228.bin", *(uintptr_t*)(saveOffset + 0x228), 0x2000);
-	dumpMemory("0x268.bin", *(uintptr_t*)(saveOffset + 0x268), 0x2000);
-	dumpMemory("0x288.bin", *(uintptr_t*)(saveOffset + 0x288), 0x2000);
-	// dumpMemory("0x2D8.bin", *(uintptr_t*)(saveOffset + 0x2D8), 0x2000);
-	dumpMemory("0x400.bin", *(uintptr_t*)(saveOffset + 0x400), 0x2000);
-	dumpMemory("0x528.bin", *(uintptr_t*)(saveOffset + 0x528), 0x2000);
-	dumpMemory("0x548.bin", *(uintptr_t*)(saveOffset + 0x548), 0x2000);
-	dumpMemory("0x568.bin", *(uintptr_t*)(saveOffset + 0x568), 0x2000);
-	dumpMemory("0x588.bin", *(uintptr_t*)(saveOffset + 0x588), 0x2000);
-	dumpMemory("0x8D0.bin", *(uintptr_t*)(saveOffset + 0x8D0), 0x2000);
-	dumpMemory("0x8F8.bin", *(uintptr_t*)(saveOffset + 0x8F8), 0x2000);
-	dumpMemory("0xA50.bin", *(uintptr_t*)(saveOffset + 0xA50), 0x2000);
-
-	// Derefence the settings (??) region
-	uintptr_t settings = *(uintptr_t*)(saveOffset + 0x400);
-
-	// Write 1s to every blank memory space lol
-	// writeMemory(settings + 0x08, 0x2, 0x10);
-
-	watchMemory("settings", settings, 0x100, 15);
-
-	*/
-
-	writeLog("dumpPointerMemory complete.");
-
-	// Return success/fail status
-	return 0;
+	writeLog("watchMemory done.\n");
 }
 #endif
 
@@ -804,7 +710,7 @@ static int dumpPointerMemory()
 static int setFullTune()
 {
 #ifdef _DEBUG
-	writeLog("Call to setFullTune...");
+	writeLog("Call to setFullTune...\n");
 #endif
 
 	// Get the memory addresses for the car base save, power and handling values
@@ -831,7 +737,7 @@ static int setFullTune()
 	}
 
 #ifdef _DEBUG
-	update ? writeLog("setFullTune not updated.") : writeLog("setFullTune updated.");
+	update ? writeLog("setFullTune not updated.\n") : writeLog("setFullTune updated.\n");
 #endif
 
 	// Return update code
@@ -846,7 +752,7 @@ static int setFullTune()
 static DWORD WINAPI spamFullTune(void* pArguments)
 {
 #ifdef _DEBUG
-	writeLog("Call to spamFullTune...");
+	writeLog("Call to spamFullTune...\n");
 #endif
 
 	// Loops while the program is running
@@ -860,52 +766,17 @@ static DWORD WINAPI spamFullTune(void* pArguments)
 	}
 
 #ifdef _DEBUG
-	writeLog("spamFullTune done.");
+	writeLog("spamFullTune done.\n");
 #endif
 }
-
-/*
-#ifdef _DEBUG
-// Custom aura (2 bytes)
-char customAuraDxp[2];
-
-static DWORD WINAPI spamCustomAura(LPVOID)
-{
-	writeLog("Call to spamCustomAura...");
-
-
-	// Address where player save data starts
-	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
-
-	// Address where car save data starts
-	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
-
-	// Watch the car memory save region
-	watchMemory("car_dump", carSaveBase, 0x100, 15);
-
-	// Infinite loop
-	while (true)
-	{
-		// Wait 50ms
-		Sleep(50);
-
-		// Write the custom name to the car name in the name plate
-		memcpy((void*)(carSaveBase + 0xF0), customAuraDxp, 0x2);
-	}
-
-	writeLog("spamCustomAura done.");
-
-}
-#endif
-*/
 
 // Custom name (i.e. Scrubbs)
 char customNameDxp[256];
 
-static DWORD WINAPI spamCustomName(LPVOID)
+static DWORD WINAPI spamCustomNameDxp(LPVOID)
 {
 #ifdef _DEBUG
-	writeLog("Call to spamCustomName...");
+	writeLog("Call to spamCustomNameDxp...\n");
 #endif
 
 	// Infinite loop
@@ -922,7 +793,7 @@ static DWORD WINAPI spamCustomName(LPVOID)
 	}
 
 #ifdef _DEBUG
-	writeLog("spamCustomName done.");
+	writeLog("spamCustomNameDxp done.\n");
 #endif
 }
 
@@ -933,7 +804,7 @@ static DWORD WINAPI spamCustomName(LPVOID)
 static int saveCustomSticker(char* filename)
 {
 #ifdef _DEBUG
-	writeLog("Call to saveCustomSticker...");
+	writeLog("Call to saveCustomSticker...\n");
 #endif
 
 	// Default (empty) array for empty sticker text
@@ -948,7 +819,7 @@ static int saveCustomSticker(char* filename)
 	bool status = writeDump(filename, windowText, STICKER_LENGTH);
 
 #ifdef _DEBUG
-	status ? writeLog("saveCustomSticker failed.") : writeLog("saveCustomSticker success.");
+	status ? writeLog("saveCustomSticker failed.\n") : writeLog("saveCustomSticker success.\n");
 #endif
 
 	// Return status code
@@ -962,7 +833,7 @@ static int saveCustomSticker(char* filename)
 static int loadCustomSticker(char* filename)
 {
 #ifdef _DEBUG
-	writeLog("Call to loadCustomSticker...");
+	writeLog("Call to loadCustomSticker...\n");
 #endif
 
 	// Address where player save data starts
@@ -1033,16 +904,16 @@ static int loadCustomSticker(char* filename)
 	switch (status)
 	{
 	case 0: // Success
-		writeLog("loadCustomSticker success.");
+		writeLog("loadCustomSticker success.\n");
 		break;
 	case 1: // No file
-		writeLog("loadCustomSticker failed: No file. Default file created.");
+		writeLog("loadCustomSticker failed: No file. Default file created.\n");
 		break;
 	case 2: // File wrong size
-		writeLog("loadCustomSticker failed: Wrong file size.");
+		writeLog("loadCustomSticker failed: Wrong file size.\n");
 		break;
 	default: // Generic error
-		writeLog("loadCustomSticker failed.");
+		writeLog("loadCustomSticker failed.\n");
 		break;
 	}
 #endif
@@ -1058,7 +929,7 @@ static int loadCustomSticker(char* filename)
 static int saveCustomName(char* filename)
 {
 #ifdef _DEBUG
-	writeLog("Call to saveCustomName...");
+	writeLog("Call to saveCustomName...\n");
 #endif
 
 	// Address where player save data starts
@@ -1076,7 +947,7 @@ static int saveCustomName(char* filename)
 	bool status = dumpMemory(filename, namePtr, NAME_LENGTH);
 
 #ifdef _DEBUG
-	status ? writeLog("saveCustomName failed.") : writeLog("saveCustomName success.");
+	status ? writeLog("saveCustomName failed.\n") : writeLog("saveCustomName success.\n");
 #endif
 
 	// Return status code
@@ -1092,7 +963,7 @@ static int saveCustomName(char* filename)
 static int loadCustomName(char* filename)
 {
 #ifdef _DEBUG
-	writeLog("Call to loadCustomName...");
+	writeLog("Call to loadCustomName...\n");
 #endif
 
 	// Address where player save data starts
@@ -1166,16 +1037,16 @@ static int loadCustomName(char* filename)
 	switch (status)
 	{
 	case 0: // Success
-		writeLog("loadCustomName success.");
+		writeLog("loadCustomName success.\n");
 		break;
 	case 1: // No file
-		writeLog("loadCustomName failed: No file. Default file created.");
+		writeLog("loadCustomName failed: No file. Default file created.\n");
 		break;
 	case 2: // File wrong size
-		writeLog("loadCustomName failed: Wrong file size.");
+		writeLog("loadCustomName failed: Wrong file size.\n");
 		break;
 	default: // Generic error
-		writeLog("loadCustomName failed.");
+		writeLog("loadCustomName failed.\n");
 		break;
 	}
 #endif
@@ -1190,7 +1061,7 @@ static int loadCustomName(char* filename)
 static int saveCustomTitle(char* filename)
 {
 #ifdef _DEBUG
-	writeLog("Call to saveCustomTitle...");
+	writeLog("Call to saveCustomTitle...\n");
 #endif
 
 	// Open the file for the title
@@ -1222,7 +1093,7 @@ static int saveCustomTitle(char* filename)
 	}
 
 #ifdef _DEBUG
-	status ? writeLog("saveCustomTitle failed.") : writeLog("saveCustomTitle success.");
+	status ? writeLog("saveCustomTitle failed.\n") : writeLog("saveCustomTitle success.\n");
 #endif
 
 	// Return status code
@@ -1234,7 +1105,7 @@ static int saveCustomTitle(char* filename)
 static int loadCustomTitle(char* filename)
 {
 #ifdef _DEBUG
-	writeLog("Call to loadCustomTitle...");
+	writeLog("Call to loadCustomTitle...\n");
 #endif
 
 	// Address where player save data starts
@@ -1308,16 +1179,16 @@ static int loadCustomTitle(char* filename)
 	switch (status)
 	{
 	case 0: // Success
-		writeLog("loadCustomTitle success.");
+		writeLog("loadCustomTitle success.\n");
 		break;
 	case 1: // No file
-		writeLog("loadCustomTitle failed: No file. Default file created.");
+		writeLog("loadCustomTitle failed: No file. Default file created.\n");
 		break;
 	case 2: // File wrong size
-		writeLog("loadCustomTitle failed: Wrong file size.");
+		writeLog("loadCustomTitle failed: Wrong file size.\n");
 		break;
 	default: // Generic error
-		writeLog("loadCustomTitle failed.");
+		writeLog("loadCustomTitle failed.\n");
 		break;
 	}
 #endif
@@ -1332,7 +1203,7 @@ static int loadCustomTitle(char* filename)
 static int loadCarFile(char* filename)
 {
 #ifdef _DEBUG
-	writeLog("Call to loadCarFile...");
+	writeLog("Call to loadCarFile...\n");
 #endif
 
 	// Car save data reserved memory
@@ -1412,19 +1283,6 @@ static int loadCarFile(char* filename)
 			memcpy((void*)(carSaveBase + 0xF0), carDataDxp + 0xF0, 8); // ??
 			// memcpy((void*)(carSaveBase + 0xF8), carDataDxp + 0xF8, 8); // Crash (Region Pointer) (F8)
 
-/*
-#ifdef _DEBUG
-			// Clear the aura region
-			memset(customAuraDxp, 0x0, 0x2);
-
-			// Copy the aura to the aura save data
-			memcpy(customAuraDxp, carDataDxp + 0xF0, 0x2);
-
-			// Create the spam custom aura thread
-			CreateThread(0, 0, spamCustomAura, 0, 0, 0);
-#endif
-*/
-
 			// Success
 			status = 0;
 		}
@@ -1445,16 +1303,16 @@ static int loadCarFile(char* filename)
 	switch (status)
 	{
 	case 0: // Success
-		writeLog("loadCarFile success.");
+		writeLog("loadCarFile success.\n");
 		break;
 	case 1: // No file
-		writeLog("loadCarFile failed: No file.");
+		writeLog("loadCarFile failed: No file.\n");
 		break;
 	case 2: // File wrong size
-		writeLog("loadCarFile failed: Wrong file size.");
+		writeLog("loadCarFile failed: Wrong file size.\n");
 		break;
 	default: // Generic error
-		writeLog("loadCarFile failed.");
+		writeLog("loadCarFile failed.\n");
 		break;
 	}
 #endif
@@ -1470,7 +1328,7 @@ static int loadCarFile(char* filename)
 static int loadCarData(char * filepath)
 {
 #ifdef _DEBUG
-	writeLog("Call to loadCarData...");
+	writeLog("Call to loadCarData...\n");
 #endif
 
 	// Custom car disabled by default
@@ -1489,8 +1347,7 @@ static int loadCarData(char * filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\OpenParrot_Cars");
-	sprintf(path, "%s\\%s", path, CAR_FILEPATH);
+	strcat(path, "\\OpenParrot_Cars");
 
 	// Create the OpenParrot_cars directory at the given filepath
 	std::filesystem::create_directories(path);
@@ -1555,152 +1412,7 @@ static int loadCarData(char * filepath)
 	}
 
 #ifdef _DEBUG
-	status ? writeLog("loadCarData failed.") : writeLog("loadCarData success.");
-#endif
-
-	// Return status code
-	return status;
-}
-
-static int saveSettingsData(char* filepath)
-{
-#ifdef _DEBUG
-	writeLog("Call to saveSettingData...");
-#endif
-
-	// Miles path string
-	char path[FILENAME_MAX];
-
-	// Set the path memory to zero
-	memset(path, 0, FILENAME_MAX);
-
-	// Copy the file path to the miles path
-	strcpy(path, filepath);
-
-	// Append the mileage filename to the string
-	// strcat(path, "\\openprogress.sav");
-	sprintf(path, "%s\\%s", path, SETTINGS_FILENAME);
-
-	// Save story data
-
-	// Address where player save data starts
-	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
-
-	// Address where the player story data starts
-	uintptr_t settingsPtr = *(uintptr_t*)(savePtr + SETTINGS_OFFSET);
-
-	// Dump the save data to openprogress.sav
-	bool status = dumpMemory(path, settingsPtr, SETTINGS_DATA_SIZE);
-
-#ifdef _DEBUG
-	status ? writeLog("saveSettingData failed.") : writeLog("saveSettingData success.");
-#endif
-
-	// Return status code
-	return status;
-}
-
-static int loadSettingsData(char* filepath)
-{
-#ifdef _DEBUG
-	writeLog("Call to loadSettingsData...");
-#endif
-
-	// Save data dump memory block
-	unsigned char settingsData[SETTINGS_DATA_SIZE];
-
-	// Zero out the save data array
-	memset(settingsData, 0x0, SETTINGS_DATA_SIZE);
-
-	// Miles path string
-	char path[FILENAME_MAX];
-
-	// Set the path memory to zero
-	memset(path, 0x0, FILENAME_MAX);
-
-	// Copy the file path to the miles path
-	strcpy(path, filepath);
-
-	// Append the mileage filename to the string
-	// strcat(path, "\\openprogress.sav");
-	sprintf(path, "%s\\%s", path, SETTINGS_FILENAME);
-
-	// Address where player save data starts
-	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
-
-	// Story save data offset
-	uintptr_t settingsPtr = *(uintptr_t*)(savePtr + SETTINGS_OFFSET);
-
-	// Open the openprogress file with read privileges	
-	FILE* file = fopen(path, "rb");
-
-	// Status code (default: failed to load file)
-	int status = 1;
-
-	// If the file exists
-	if (file)
-	{
-		// Get all of the contents from the file
-		fseek(file, 0, SEEK_END);
-
-		// Get the size of the file
-		int fsize = ftell(file);
-
-		// Check file is correct size
-		if (fsize == SETTINGS_DATA_SIZE)
-		{
-			// Reset seek index to start
-			fseek(file, 0, SEEK_SET);
-
-			// Read all of the contents of the file into storyDataDxp
-			fread(settingsData, fsize, 1, file);
-
-			dumpMemory("settings_pre.bin", settingsPtr, 0x50);
-
-			// Copy the saved settings data from the settings file into the game
-			// memcpy((void*)(settingsPtr + 0x08), (void*)(settingsData + 0x08), (SETTINGS_DATA_SIZE - 0x08)); 
-			// memcpy((void*)(settingsPtr + 0x08), (void*)(settingsData + 0x08), 0x08); // First row (last 2 blocks) (Crash after title update)
-
-			memcpy((void*)(settingsPtr + 0x14), (void*)(settingsData + 0x14), 0x0C); // Second row (last 3 blocks)
-			memcpy((void*)(settingsPtr + 0x20), (void*)(settingsData + 0x20), 0x10); // Third row (entire row)
-			memcpy((void*)(settingsPtr + 0x30), (void*)(settingsData + 0x30), 0x10); // Fourth row (entire row)
-
-			dumpMemory("settings_post.bin", settingsPtr, 0x50);
-
-			// Success code
-			status = 0;
-		}
-		else // Story file is incorrect size
-		{
-			// Incorrect size error code
-			status = 2;
-		}
-
-		// Close the file
-		fclose(file);
-	}
-	else // File does not exist
-	{
-		// Create the car settings file
-		saveSettingsData(path);
-	}
-
-#ifdef _DEBUG
-	switch (status)
-	{
-	case 0: // Success
-		writeLog("loadSettingsData success.");
-		break;
-	case 1: // No file
-		writeLog("loadSettingsData failed: No file. Default file will be created.");
-		break;
-	case 2: // File wrong size
-		writeLog("loadSettingsData failed: Wrong file size.");
-		break;
-	default: // Generic error
-		writeLog("loadSettingsData failed.");
-		break;
-	}
+	status ? writeLog("loadCarData failed.\n") : writeLog("loadCarData success.\n");
 #endif
 
 	// Return status code
@@ -1710,7 +1422,7 @@ static int loadSettingsData(char* filepath)
 static int saveCarData(char* filepath)
 {
 #ifdef _DEBUG
-	writeLog("Call to saveCarData...");
+	writeLog("Call to saveCarData...\n");
 #endif
 
 	memset(carFileNameDxp, 0, FILENAME_MAX);
@@ -1731,8 +1443,7 @@ static int saveCarData(char* filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\OpenParrot_Cars");
-	sprintf(path, "%s\\%s", path, CAR_FILEPATH);
+	strcat(path, "\\OpenParrot_Cars");
 
 	// Create the cars path folder
 	std::filesystem::create_directories(path);
@@ -1755,7 +1466,7 @@ static int saveCarData(char* filepath)
 	bool status = dumpMemory(carFileNameDxp, carSaveBase, CAR_DATA_SIZE);
 
 #ifdef _DEBUG
-	status ? writeLog("saveCarData failed.") : writeLog("saveCarData success.");
+	status ? writeLog("saveCarData failed.\n") : writeLog("saveCarData success.\n");
 #endif
 
 	// Return status code
@@ -1768,7 +1479,7 @@ static int saveCarData(char* filepath)
 static int loadStoryData(char* filepath)
 {
 #ifdef _DEBUG
-	writeLog("Call to loadStoryData...");
+	writeLog("Call to loadStoryData...\n");
 #endif
 
 	// Save data dump memory block
@@ -1787,9 +1498,7 @@ static int loadStoryData(char* filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\openprogress.sav");
-	sprintf(path, "%s\\%s", path, STORY_FILENAME);
-
+	strcat(path, "\\openprogress.sav");
 
 	// Address where player save data starts
 	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
@@ -1881,16 +1590,16 @@ static int loadStoryData(char* filepath)
 	switch (status)
 	{
 	case 0: // Success
-		writeLog("loadStoryData success.");
+		writeLog("loadStoryData success.\n");
 		break;
 	case 1: // No file
-		writeLog("loadStoryData failed: No file.");
+		writeLog("loadStoryData failed: No file.\n");
 		break;
 	case 2: // File wrong size
-		writeLog("loadStoryData failed: Wrong file size.");
+		writeLog("loadStoryData failed: Wrong file size.\n");
 		break;
 	default: // Generic error
-		writeLog("loadStoryData failed.");
+		writeLog("loadStoryData failed.\n");
 		break;
 	}
 #endif
@@ -1902,7 +1611,7 @@ static int loadStoryData(char* filepath)
 static int saveStoryData(char* filepath)
 {
 #ifdef _DEBUG
-	writeLog("Call to saveStoryData...");
+	writeLog("Call to saveStoryData...\n");
 #endif
 
 	// Miles path string
@@ -1915,8 +1624,7 @@ static int saveStoryData(char* filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\openprogress.sav");
-	sprintf(path, "%s\\%s", path, STORY_FILENAME);
+	strcat(path, "\\openprogress.sav");
 
 	// Save story data
 
@@ -1930,7 +1638,7 @@ static int saveStoryData(char* filepath)
 	bool status = dumpMemory(path, storySaveBase, STORY_DATA_SIZE);
 
 #ifdef _DEBUG
-	status ? writeLog("saveStoryData failed.") : writeLog("saveStoryData success.");
+	status ? writeLog("saveStoryData failed.\n") : writeLog("saveStoryData success.\n");
 #endif
 
 	// Return status code
@@ -1940,7 +1648,7 @@ static int saveStoryData(char* filepath)
 static int loadMileData(char* filepath)
 {
 #ifdef _DEBUG
-	writeLog("Call to loadMileData...");
+	writeLog("Call to loadMileData...\n");
 #endif
 
 	// Mile data dump memory block
@@ -1959,8 +1667,7 @@ static int loadMileData(char* filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\openprogress.sav");
-	sprintf(path, "%s\\%s", path, MILE_FILENAME);
+	strcat(path, "\\mileage.dat");
 
 	// Path to the miles file
 	FILE* file = fopen(path, "rb");
@@ -2006,16 +1713,16 @@ static int loadMileData(char* filepath)
 	switch (status)
 	{
 	case 0: // Success
-		writeLog("loadMileData success.");
+		writeLog("loadMileData success.\n");
 		break;
 	case 1: // No file
-		writeLog("loadMileData failed: No file.");
+		writeLog("loadMileData failed: No file.\n");
 		break;
 	case 2: // File wrong size
-		writeLog("loadMileData failed: Wrong file size.");
+		writeLog("loadMileData failed: Wrong file size.\n");
 		break;
 	default: // Generic error
-		writeLog("loadMileData failed.");
+		writeLog("loadMileData failed.\n");
 		break;
 	}
 #endif
@@ -2027,7 +1734,7 @@ static int loadMileData(char* filepath)
 static int saveMileData(char* filepath)
 {
 #ifdef _DEBUG
-	writeLog("Call to saveMileData...");
+	writeLog("Call to saveMileData...\n");
 #endif
 
 	// Address where player save data starts
@@ -2046,8 +1753,7 @@ static int saveMileData(char* filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\openprogress.sav");
-	sprintf(path, "%s\\%s", path, MILE_FILENAME);
+	strcat(path, "\\mileage.dat");
 
 	// Load the miles file
 	FILE* file = fopen(path, "wb");
@@ -2069,7 +1775,7 @@ static int saveMileData(char* filepath)
 	}
 
 #ifdef _DEBUG
-	status ? writeLog("saveMileData failed.") : writeLog("saveMileData success.");
+	status ? writeLog("saveMileData failed.\n") : writeLog("saveMileData success.\n");
 #endif
 
 	// Return status code
@@ -2080,7 +1786,7 @@ static int saveMileData(char* filepath)
 static int saveVersusData(char* filepath)
 {
 #ifdef _DEBUG
-	writeLog("Call to saveVersusData...");
+	writeLog("Call to saveVersusData...\n");
 #endif
 
 	// Star path saving
@@ -2093,8 +1799,7 @@ static int saveVersusData(char* filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\openversus.sav");
-	sprintf(path, "%s\\%s", path, VERSUS_FILENAME);
+	strcat(path, "\\openversus.sav");
 
 	// Save Star Data
 
@@ -2106,7 +1811,7 @@ static int saveVersusData(char* filepath)
 	bool status = dumpMemory(path, versusPtr, VERSUS_DATA_SIZE);
 
 #ifdef _DEBUG
-status ? writeLog("saveVersusData failed.") : writeLog("saveVersusData success.");
+status ? writeLog("saveVersusData failed.\n") : writeLog("saveVersusData success.\n");
 #endif
 
 	// Return status code
@@ -2116,7 +1821,7 @@ status ? writeLog("saveVersusData failed.") : writeLog("saveVersusData success."
 static int loadVersusData(char* filepath)
 {
 #ifdef _DEBUG
-	writeLog("Call to loadVersusData...");
+	writeLog("Call to loadVersusData...\n");
 #endif
 
 	// Star data dump memory block
@@ -2135,8 +1840,7 @@ static int loadVersusData(char* filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\openversus.sav");
-	sprintf(path, "%s\\%s", path, VERSUS_FILENAME);
+	strcat(path, "\\openversus.sav");
 
 	// Dereference the versus pointer in the game memory
 	// Add 0x200 to it, because all of the versus stuff is after the first 0x200 bytes
@@ -2200,16 +1904,16 @@ static int loadVersusData(char* filepath)
 	switch (status)
 	{
 	case 0: // Success
-		writeLog("loadVersusData success.");
+		writeLog("loadVersusData success.\n");
 		break;
 	case 1: // No file
-		writeLog("loadVersusData failed: No file.");
+		writeLog("loadVersusData failed: No file.\n");
 		break;
 	case 2: // File wrong size
-		writeLog("loadVersusData failed: Wrong file size.");
+		writeLog("loadVersusData failed: Wrong file size.\n");
 		break;
 	default: // Generic error
-		writeLog("loadVersusData failed.");
+		writeLog("loadVersusData failed.\n");
 		break;
 	}
 #endif
@@ -2221,11 +1925,7 @@ static int loadVersusData(char* filepath)
 static int loadGameData()
 {
 #ifdef _DEBUG
-	writeLog("Call to loadGameData...");
-#endif
-
-#ifdef _DEBUG
-	// dumpPointerMemory();
+	writeLog("Call to loadGameData...\n");
 #endif
 
 	// Disable saving
@@ -2258,8 +1958,17 @@ static int loadGameData()
 	{
 		// Need to get the hex code for the selected car
 
-		// Add the custom folder to the save path
-		sprintf(path, "%s\\%08X", path, selectedCarCodeDxp);
+		// If custom car is set
+		if (customCarDxp)
+		{
+			// Add the car id to the save path
+			sprintf(path, "%s\\custom", path);
+		}
+		else // Custom car is not set
+		{
+			// Add the custom folder to the save path
+			sprintf(path, "%s\\%08X", path, selectedCarCodeDxp);
+		}
 	}
 
 	// Ensure the directory exists
@@ -2270,9 +1979,6 @@ static int loadGameData()
 
 	// Load the car save file
 	loadCarData(path);
-
-	// Load the car settings file
-	loadSettingsData(path);
 
 	// Load the openprogress.sav file
 	loadStoryData(path);
@@ -2287,7 +1993,7 @@ static int loadGameData()
 	loadVersusData(path);
 
 #ifdef _DEBUG
-	writeLog("loadGameData done.");
+	writeLog("loadGameData done.\n");
 #endif
 
 	return 0;
@@ -2301,7 +2007,7 @@ static int loadGameData()
 static int saveGameData()
 {
 #ifdef _DEBUG
-	writeLog("Call to saveGameData...");
+	writeLog("Call to saveGameData...\n");
 #endif
 
 	// Saving is disabled
@@ -2364,7 +2070,7 @@ static int saveGameData()
 	saveOk = false;
 
 #ifdef _DEBUG
-	writeLog("saveGameData done.");
+	writeLog("saveGameData done.\n");
 #endif
 
 	// Success
@@ -2374,7 +2080,7 @@ static int saveGameData()
 static void loadGame()
 {
 #ifdef _DEBUG
-	writeLog("Call to loadGame ...");
+	writeLog("Call to loadGame ...\n");
 #endif
 
 	// Runs after car data is loaded
@@ -2384,7 +2090,7 @@ static void loadGame()
 	t1.detach();
 
 #ifdef _DEBUG
-	writeLog("loadGame done.");
+	writeLog("loadGame done.\n");
 #endif
 }
 
@@ -2396,7 +2102,7 @@ static int returnTrue()
 void generateDongleData(bool isTerminal)
 {
 #ifdef _DEBUG
-	writeLog("Call to generateDongleData ...");
+	writeLog("Call to generateDongleData ...\n");
 #endif
 
 	memset(hasp_buffer, 0, 0xD40);
@@ -2431,14 +2137,14 @@ void generateDongleData(bool isTerminal)
 	}
 
 #ifdef _DEBUG
-	writeLog("generateDongleData done.");
+	writeLog("generateDongleData done.\n");
 #endif
 }
 
 static DWORD WINAPI spamMulticast(LPVOID)
 {
 #ifdef _DEBUG
-	writeLog("Call to spamMulticast ...");
+	writeLog("Call to spamMulticast ...\n");
 #endif
 
 	WSADATA wsaData;
@@ -2582,7 +2288,7 @@ static DWORD WINAPI spamMulticast(LPVOID)
 	}
 
 #ifdef _DEBUG
-	writeLog("spamMulticast done.");
+	writeLog("spamMulticast done.\n");
 #endif
 }
 
@@ -2593,8 +2299,8 @@ static DWORD WINAPI spamMulticast(LPVOID)
 static InitFunction Wmmt5Func([]()
 {
 #ifdef _DEBUG
-	writeLog("Game: Wangan Midnight Maximum Tune 5DX+");
-	writeLog("Call to init function ...");
+	writeLog("Game: Wangan Midnight Maximum Tune 5DX+\n");
+	writeLog("Call to init function ...\n");
 #endif
 
 	// Records if terminal mode is enabled
@@ -2771,7 +2477,7 @@ static InitFunction Wmmt5Func([]()
 		strcpy(customNameDxp, customName.c_str());
 
 		// Create the spam custom name thread
-		// CreateThread(0, 0, spamCustomName, 0, 0, 0);
+		// CreateThread(0, 0, spamCustomNameDxp, 0, 0, 0);
 	}
 
 	// Save story stuff (only 05)
@@ -2802,7 +2508,7 @@ static InitFunction Wmmt5Func([]()
 	MH_EnableHook(MH_ALL_HOOKS);
 
 #ifdef _DEBUG
-	writeLog("Init function done.");
+	writeLog("Init function done.\n");
 #endif
 
 }, GameID::WMMT5DXPlus);

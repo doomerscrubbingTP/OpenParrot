@@ -328,7 +328,7 @@ unsigned char dxpterminalPackage6_Event2P[139] = {
 // and debug functions will be included in
 // the compilation
 
-#define _DEBUG
+// #define _DEBUG
 
 #define HASP_STATUS_OK 0
 unsigned int hook_hasp_login(int feature_id, void* vendor_code, int hasp_handle) {
@@ -391,27 +391,7 @@ bool WINAPI Hook_SetSystemTime(SYSTEMTIME* in)
 	return TRUE;
 }
 
-// **** Save Data Filenames ****
-
-// Settings data filename
-#define SETTINGS_FILENAME "opensettings.sav"
-
-// Story data filename
-#define STORY_FILENAME "openprogress.sav"
-
-// Versus data filename
-#define VERSUS_FILENAME "openversus.sav"
-
-// Mileeage data filename
-#define MILE_FILENAME "openmileage.sav"
-
-// Folder path for cars
-#define CAR_FILEPATH "OpenParrot_Cars"
-
 // **** Data Region Sizes ****
-
-// Settings region load/save size
-#define SETTINGS_DATA_SIZE 0x40
 
 // Versus region load/save size
 #define VERSUS_DATA_SIZE 0x100
@@ -441,17 +421,14 @@ bool WINAPI Hook_SetSystemTime(SYSTEMTIME* in)
 // Save Data Location Constant
 #define SAVE_OFFSET 0x1F7D578
 
-// Settings Data Offset (Within Save Data Region)
-#define SETTINGS_OFFSET 0x400
-
-// Story Data Offset (Within Save Data Region)
-#define STORY_OFFSET 0x108
-
 // Mile Data Offset (Within Save Data Region)
 #define MILE_OFFSET 0x280
 
 // Car Data Offset (Within Save Data Region)
 #define CAR_OFFSET 0x268
+
+// Story Data Offset (Within Save Data Region)
+#define STORY_OFFSET 0x108
 
 // *** Unsigned Char (Memory Storage) Objects ***
 
@@ -736,66 +713,6 @@ static void watchMemory(char* filename, uintptr_t memory, size_t size, int delay
 }
 #endif
 
-#ifdef _DEBUG
-static int dumpPointerMemory()
-{
-	writeLog("Call to dumpPointerMemory...");
-
-	uintptr_t saveOffset = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
-
-	/*
-	dumpMemory("0x00.bin", *(uintptr_t*)(saveOffset + 0x0), 0x2000);
-	dumpMemory("0x08.bin", *(uintptr_t*)(saveOffset + 0x8), 0x2000);
-	dumpMemory("0x18.bin", *(uintptr_t*)(saveOffset + 0x18), 0x2000);
-	dumpMemory("0x20.bin", *(uintptr_t*)(saveOffset + 0x20), 0x2000);
-	dumpMemory("0x30.bin", *(uintptr_t*)(saveOffset + 0x30), 0x2000);
-	dumpMemory("0x68.bin", *(uintptr_t*)(saveOffset + 0x68), 0x2000);
-	dumpMemory("0xC0.bin", *(uintptr_t*)(saveOffset + 0xC0), 0x2000);
-	dumpMemory("0xC8.bin", *(uintptr_t*)(saveOffset + 0xC8), 0x2000);
-	dumpMemory("0xD8.bin", *(uintptr_t*)(saveOffset + 0xD8), 0x2000);
-	dumpMemory("0xE0.bin", *(uintptr_t*)(saveOffset + 0xE0), 0x2000);
-	dumpMemory("0xF0.bin", *(uintptr_t*)(saveOffset + 0xF0), 0x2000);
-	dumpMemory("0xF8.bin", *(uintptr_t*)(saveOffset + 0xF8), 0x2000);
-	dumpMemory("0x108.bin", *(uintptr_t*)(saveOffset + 0x108), 0x2000);
-	dumpMemory("0x110.bin", *(uintptr_t*)(saveOffset + 0x110), 0x2000);
-	dumpMemory("0x158.bin", *(uintptr_t*)(saveOffset + 0x158), 0x2000);
-	dumpMemory("0x160.bin", *(uintptr_t*)(saveOffset + 0x160), 0x2000);
-	dumpMemory("0x170.bin", *(uintptr_t*)(saveOffset + 0x170), 0x2000);
-	dumpMemory("0x178.bin", *(uintptr_t*)(saveOffset + 0x178), 0x2000);
-	// dumpMemory("0x198.bin", *(uintptr_t*)(saveOffset + 0x198), 0x2000); not a ptr
-	dumpMemory("0x1A8.bin", *(uintptr_t*)(saveOffset + 0x1A8), 0x2000);
-	dumpMemory("0x1B0.bin", *(uintptr_t*)(saveOffset + 0x1B0), 0x2000);
-	dumpMemory("0x218.bin", *(uintptr_t*)(saveOffset + 0x218), 0x2000);
-	dumpMemory("0x228.bin", *(uintptr_t*)(saveOffset + 0x228), 0x2000);
-	dumpMemory("0x268.bin", *(uintptr_t*)(saveOffset + 0x268), 0x2000);
-	dumpMemory("0x288.bin", *(uintptr_t*)(saveOffset + 0x288), 0x2000);
-	// dumpMemory("0x2D8.bin", *(uintptr_t*)(saveOffset + 0x2D8), 0x2000);
-	dumpMemory("0x400.bin", *(uintptr_t*)(saveOffset + 0x400), 0x2000);
-	dumpMemory("0x528.bin", *(uintptr_t*)(saveOffset + 0x528), 0x2000);
-	dumpMemory("0x548.bin", *(uintptr_t*)(saveOffset + 0x548), 0x2000);
-	dumpMemory("0x568.bin", *(uintptr_t*)(saveOffset + 0x568), 0x2000);
-	dumpMemory("0x588.bin", *(uintptr_t*)(saveOffset + 0x588), 0x2000);
-	dumpMemory("0x8D0.bin", *(uintptr_t*)(saveOffset + 0x8D0), 0x2000);
-	dumpMemory("0x8F8.bin", *(uintptr_t*)(saveOffset + 0x8F8), 0x2000);
-	dumpMemory("0xA50.bin", *(uintptr_t*)(saveOffset + 0xA50), 0x2000);
-
-	// Derefence the settings (??) region
-	uintptr_t settings = *(uintptr_t*)(saveOffset + 0x400);
-
-	// Write 1s to every blank memory space lol
-	// writeMemory(settings + 0x08, 0x2, 0x10);
-
-	watchMemory("settings", settings, 0x100, 15);
-
-	*/
-
-	writeLog("dumpPointerMemory complete.");
-
-	// Return success/fail status
-	return 0;
-}
-#endif
-
 // setFullTune(void): Int
 // If the currently loaded car is NOT fully tuned, 
 // updates the power and handling values to be fully
@@ -864,7 +781,6 @@ static DWORD WINAPI spamFullTune(void* pArguments)
 #endif
 }
 
-/*
 #ifdef _DEBUG
 // Custom aura (2 bytes)
 char customAuraDxp[2];
@@ -880,9 +796,6 @@ static DWORD WINAPI spamCustomAura(LPVOID)
 	// Address where car save data starts
 	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
 
-	// Watch the car memory save region
-	watchMemory("car_dump", carSaveBase, 0x100, 15);
-
 	// Infinite loop
 	while (true)
 	{
@@ -897,7 +810,6 @@ static DWORD WINAPI spamCustomAura(LPVOID)
 
 }
 #endif
-*/
 
 // Custom name (i.e. Scrubbs)
 char customNameDxp[256];
@@ -1412,18 +1324,16 @@ static int loadCarFile(char* filename)
 			memcpy((void*)(carSaveBase + 0xF0), carDataDxp + 0xF0, 8); // ??
 			// memcpy((void*)(carSaveBase + 0xF8), carDataDxp + 0xF8, 8); // Crash (Region Pointer) (F8)
 
-/*
 #ifdef _DEBUG
 			// Clear the aura region
 			memset(customAuraDxp, 0x0, 0x2);
 
 			// Copy the aura to the aura save data
-			memcpy(customAuraDxp, carDataDxp + 0xF0, 0x2);
+			memcpy((void*)(carSaveBase + 0xF0), carDataDxp + 0xF0, 0x2);
 
 			// Create the spam custom aura thread
 			CreateThread(0, 0, spamCustomAura, 0, 0, 0);
 #endif
-*/
 
 			// Success
 			status = 0;
@@ -1489,8 +1399,7 @@ static int loadCarData(char * filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\OpenParrot_Cars");
-	sprintf(path, "%s\\%s", path, CAR_FILEPATH);
+	strcat(path, "\\OpenParrot_Cars");
 
 	// Create the OpenParrot_cars directory at the given filepath
 	std::filesystem::create_directories(path);
@@ -1562,151 +1471,6 @@ static int loadCarData(char * filepath)
 	return status;
 }
 
-static int saveSettingsData(char* filepath)
-{
-#ifdef _DEBUG
-	writeLog("Call to saveSettingData...");
-#endif
-
-	// Miles path string
-	char path[FILENAME_MAX];
-
-	// Set the path memory to zero
-	memset(path, 0, FILENAME_MAX);
-
-	// Copy the file path to the miles path
-	strcpy(path, filepath);
-
-	// Append the mileage filename to the string
-	// strcat(path, "\\openprogress.sav");
-	sprintf(path, "%s\\%s", path, SETTINGS_FILENAME);
-
-	// Save story data
-
-	// Address where player save data starts
-	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
-
-	// Address where the player story data starts
-	uintptr_t settingsPtr = *(uintptr_t*)(savePtr + SETTINGS_OFFSET);
-
-	// Dump the save data to openprogress.sav
-	bool status = dumpMemory(path, settingsPtr, SETTINGS_DATA_SIZE);
-
-#ifdef _DEBUG
-	status ? writeLog("saveSettingData failed.") : writeLog("saveSettingData success.");
-#endif
-
-	// Return status code
-	return status;
-}
-
-static int loadSettingsData(char* filepath)
-{
-#ifdef _DEBUG
-	writeLog("Call to loadSettingsData...");
-#endif
-
-	// Save data dump memory block
-	unsigned char settingsData[SETTINGS_DATA_SIZE];
-
-	// Zero out the save data array
-	memset(settingsData, 0x0, SETTINGS_DATA_SIZE);
-
-	// Miles path string
-	char path[FILENAME_MAX];
-
-	// Set the path memory to zero
-	memset(path, 0x0, FILENAME_MAX);
-
-	// Copy the file path to the miles path
-	strcpy(path, filepath);
-
-	// Append the mileage filename to the string
-	// strcat(path, "\\openprogress.sav");
-	sprintf(path, "%s\\%s", path, SETTINGS_FILENAME);
-
-	// Address where player save data starts
-	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
-
-	// Story save data offset
-	uintptr_t settingsPtr = *(uintptr_t*)(savePtr + SETTINGS_OFFSET);
-
-	// Open the openprogress file with read privileges	
-	FILE* file = fopen(path, "rb");
-
-	// Status code (default: failed to load file)
-	int status = 1;
-
-	// If the file exists
-	if (file)
-	{
-		// Get all of the contents from the file
-		fseek(file, 0, SEEK_END);
-
-		// Get the size of the file
-		int fsize = ftell(file);
-
-		// Check file is correct size
-		if (fsize == SETTINGS_DATA_SIZE)
-		{
-			// Reset seek index to start
-			fseek(file, 0, SEEK_SET);
-
-			// Read all of the contents of the file into storyDataDxp
-			fread(settingsData, fsize, 1, file);
-
-			dumpMemory("settings_pre.bin", settingsPtr, 0x50);
-
-			// Copy the saved settings data from the settings file into the game
-			// memcpy((void*)(settingsPtr + 0x08), (void*)(settingsData + 0x08), (SETTINGS_DATA_SIZE - 0x08)); 
-			// memcpy((void*)(settingsPtr + 0x08), (void*)(settingsData + 0x08), 0x08); // First row (last 2 blocks) (Crash after title update)
-
-			memcpy((void*)(settingsPtr + 0x14), (void*)(settingsData + 0x14), 0x0C); // Second row (last 3 blocks)
-			memcpy((void*)(settingsPtr + 0x20), (void*)(settingsData + 0x20), 0x10); // Third row (entire row)
-			memcpy((void*)(settingsPtr + 0x30), (void*)(settingsData + 0x30), 0x10); // Fourth row (entire row)
-
-			dumpMemory("settings_post.bin", settingsPtr, 0x50);
-
-			// Success code
-			status = 0;
-		}
-		else // Story file is incorrect size
-		{
-			// Incorrect size error code
-			status = 2;
-		}
-
-		// Close the file
-		fclose(file);
-	}
-	else // File does not exist
-	{
-		// Create the car settings file
-		saveSettingsData(path);
-	}
-
-#ifdef _DEBUG
-	switch (status)
-	{
-	case 0: // Success
-		writeLog("loadSettingsData success.");
-		break;
-	case 1: // No file
-		writeLog("loadSettingsData failed: No file. Default file will be created.");
-		break;
-	case 2: // File wrong size
-		writeLog("loadSettingsData failed: Wrong file size.");
-		break;
-	default: // Generic error
-		writeLog("loadSettingsData failed.");
-		break;
-	}
-#endif
-
-	// Return status code
-	return status;
-}
-
 static int saveCarData(char* filepath)
 {
 #ifdef _DEBUG
@@ -1731,8 +1495,7 @@ static int saveCarData(char* filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\OpenParrot_Cars");
-	sprintf(path, "%s\\%s", path, CAR_FILEPATH);
+	strcat(path, "\\OpenParrot_Cars");
 
 	// Create the cars path folder
 	std::filesystem::create_directories(path);
@@ -1787,9 +1550,7 @@ static int loadStoryData(char* filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\openprogress.sav");
-	sprintf(path, "%s\\%s", path, STORY_FILENAME);
-
+	strcat(path, "\\openprogress.sav");
 
 	// Address where player save data starts
 	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
@@ -1915,8 +1676,7 @@ static int saveStoryData(char* filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\openprogress.sav");
-	sprintf(path, "%s\\%s", path, STORY_FILENAME);
+	strcat(path, "\\openprogress.sav");
 
 	// Save story data
 
@@ -1959,8 +1719,7 @@ static int loadMileData(char* filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\openprogress.sav");
-	sprintf(path, "%s\\%s", path, MILE_FILENAME);
+	strcat(path, "\\mileage.dat");
 
 	// Path to the miles file
 	FILE* file = fopen(path, "rb");
@@ -2046,8 +1805,7 @@ static int saveMileData(char* filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\openprogress.sav");
-	sprintf(path, "%s\\%s", path, MILE_FILENAME);
+	strcat(path, "\\mileage.dat");
 
 	// Load the miles file
 	FILE* file = fopen(path, "wb");
@@ -2093,8 +1851,7 @@ static int saveVersusData(char* filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\openversus.sav");
-	sprintf(path, "%s\\%s", path, VERSUS_FILENAME);
+	strcat(path, "\\openversus.sav");
 
 	// Save Star Data
 
@@ -2135,8 +1892,7 @@ static int loadVersusData(char* filepath)
 	strcpy(path, filepath);
 
 	// Append the mileage filename to the string
-	// strcat(path, "\\openversus.sav");
-	sprintf(path, "%s\\%s", path, VERSUS_FILENAME);
+	strcat(path, "\\openversus.sav");
 
 	// Dereference the versus pointer in the game memory
 	// Add 0x200 to it, because all of the versus stuff is after the first 0x200 bytes
@@ -2224,10 +1980,6 @@ static int loadGameData()
 	writeLog("Call to loadGameData...");
 #endif
 
-#ifdef _DEBUG
-	// dumpPointerMemory();
-#endif
-
 	// Disable saving
 	saveOk = false;
 
@@ -2258,8 +2010,17 @@ static int loadGameData()
 	{
 		// Need to get the hex code for the selected car
 
-		// Add the custom folder to the save path
-		sprintf(path, "%s\\%08X", path, selectedCarCodeDxp);
+		// If custom car is set
+		if (customCarDxp)
+		{
+			// Add the car id to the save path
+			sprintf(path, "%s\\custom", path);
+		}
+		else // Custom car is not set
+		{
+			// Add the custom folder to the save path
+			sprintf(path, "%s\\%08X", path, selectedCarCodeDxp);
+		}
 	}
 
 	// Ensure the directory exists
@@ -2270,9 +2031,6 @@ static int loadGameData()
 
 	// Load the car save file
 	loadCarData(path);
-
-	// Load the car settings file
-	loadSettingsData(path);
 
 	// Load the openprogress.sav file
 	loadStoryData(path);
