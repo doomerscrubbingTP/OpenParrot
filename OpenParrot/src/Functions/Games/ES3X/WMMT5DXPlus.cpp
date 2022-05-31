@@ -328,7 +328,7 @@ unsigned char dxpterminalPackage6_Event2P[139] = {
 // and debug functions will be included in
 // the compilation
 
-#define _DEBUG
+// #define _DEBUG
 
 #define HASP_STATUS_OK 0
 unsigned int hook_hasp_login(int feature_id, void* vendor_code, int hasp_handle) {
@@ -2050,7 +2050,7 @@ static int loadStoryData(char* filepath)
 			memset((void*)(saveStoryBase + 0xF4), 0x3C, 0x1);
 
 			// Set win streak to 60
-			memset((void*)(saveStoryBase + 0x100), 0x3C, 0x1);
+			memset((void*)(saveStoryBase + 0x104), 0x3C, 0x1);
 
 			// Set the current chapter to 3 (3 Chapters cleared)
 			memset((void*)(saveStoryBase + 0xF0), 0x3, 0x1);
@@ -2941,17 +2941,21 @@ static InitFunction Wmmt5Func([]()
 	// Get the custom name specified in the  config file
 	std::string customName = config["General"]["CustomName"];
 
-	// If a custom name is set
-	if (!customName.empty())
+	// Sets if the custom name should be spammed (over the nameplate)
+	if (ToBool(config["General"]["SpamCustomName"]))
 	{
-		// Zero out the custom name variable
-		memset(customNameDxp, 0, 256);
+		// If a custom name is set
+		if (!customName.empty())
+		{
+			// Zero out the custom name variable
+			memset(customNameDxp, 0, 256);
 
-		// Copy the custom name to the custom name block
-		strcpy(customNameDxp, customName.c_str());
+			// Copy the custom name to the custom name block
+			strcpy(customNameDxp, customName.c_str());
 
-		// Create the spam custom name thread
-		// CreateThread(0, 0, spamCustomName, 0, 0, 0);
+			// Create the spam custom name thread
+			CreateThread(0, 0, spamCustomName, 0, 0, 0);
+		}
 	}
 
 	// Save story stuff (only 05)
