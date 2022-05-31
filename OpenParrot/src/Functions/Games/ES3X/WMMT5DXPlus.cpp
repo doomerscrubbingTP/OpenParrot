@@ -1715,8 +1715,9 @@ static int loadSettingsData(char* filepath)
 			// memcpy((void*)(settingsPtr + 0x08), (void*)(settingsData + 0x08), 0x08); // First row (last 2 blocks) (Crash after title update)
 
 			// Transmission setting is in 0x19 - Carefully importing 0x10 -> 0x1F to avoid it
-			memcpy((void*)(settingsPtr + 0x14), (void*)(settingsData + 0x14), 0x05); // Second row (0x14 -> 0x18)
-			memcpy((void*)(settingsPtr + 0x1A), (void*)(settingsData + 0x1A), 0x06); // Second row (0x1A -> 0x2F)
+			// I cbf fixing this area right now
+			// memcpy((void*)(settingsPtr + 0x14), (void*)(settingsData + 0x14), 0x05); // Second row (0x14 -> 0x18)
+			// memcpy((void*)(settingsPtr + 0x1A), (void*)(settingsData + 0x1A), 0x06); // Second row (0x1A -> 0x2F)
 			
 			memcpy((void*)(settingsPtr + 0x20), (void*)(settingsData + 0x20), 0x10); // Third row (entire row)
 			memcpy((void*)(settingsPtr + 0x30), (void*)(settingsData + 0x30), 0x10); // Fourth row (entire row)
