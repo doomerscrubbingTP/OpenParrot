@@ -428,7 +428,7 @@ bool WINAPI Hook_SetSystemTime(SYSTEMTIME* in)
 // String File Lengths
 
 // Maximum sticker length (32 bytes, 8 characters)
-#define STICKER_LENGTH 0x20
+#define STICKER_LENGTH 0x10
 
 // Maximum title length (16 Characters)
 #define TITLE_LENGTH 0x10
@@ -454,6 +454,14 @@ bool WINAPI Hook_SetSystemTime(SYSTEMTIME* in)
 #define CAR_OFFSET 0x268
 
 // *** Unsigned Char (Memory Storage) Objects ***
+
+// Row which is used to end the sticker region
+// Without this written to the sticker second row, 
+// the sticker does not display.
+unsigned char stringTerminator[0x10] = {
+	0x0F, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+	0x0F, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
+};
 
 // Car code of the selected car (in the menu)
 unsigned char selectedCarCodeDxp;
@@ -796,6 +804,58 @@ static int dumpPointerMemory()
 }
 #endif
 
+// fixStoryTune(void): Int
+// If the chapter 29 fix is enabled, 
+// the game will skip chapter 29 and
+// the player will rank up to basic
+// tuning a story early. This fix
+// ensures that the player still
+// gets the extra tuning point
+// if the fix is applied.
+static int fixStoryTune()
+{
+#ifdef _DEBUG
+	writeLog("Call to fixStoryTune...");
+#endif
+
+	// Get the memory addresses for the car base save, power and handling values
+	auto carSaveBase = (uintptr_t*)(*(uintptr_t*)(imageBaseDxp + SAVE_OFFSET) + CAR_OFFSET);
+	auto powerAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase)+0xAC); // Power offset
+	auto handleAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase)+0xB8); // Handling offset
+
+	// Dereference the power value from the memory address
+	auto powerValue = injector::ReadMemory<uint8_t>(powerAddress, true);
+	auto handleValue = injector::ReadMemory<uint8_t>(handleAddress, true);
+
+	// Update code (Default not updated)
+	bool update = 1;
+
+	// Check if the power value is less than 10 (basic tune)
+	if (powerValue < 0xA)
+	{
+		// Add one to the power value
+		injector::WriteMemory<uint8_t>(powerAddress, (powerValue + 0x1), true);
+
+		// Value has been updated
+		update = 0;
+	}
+	else if (handleValue < 0xA) // Otherwise, if the handling value is less than 10 (basic tune)
+	{
+		// Add one to the handling value
+		injector::WriteMemory<uint8_t>(handleAddress, (handleValue + 0x1), true);
+
+		// Value has been updated
+		update = 0;
+	}
+
+#ifdef _DEBUG
+	update ? writeLog("fixStoryTune not updated.") : writeLog("fixStoryTune updated.");
+#endif
+
+	// Return if the value was updated or not
+	return update;
+}
+
 // setFullTune(void): Int
 // If the currently loaded car is NOT fully tuned, 
 // updates the power and handling values to be fully
@@ -936,16 +996,8 @@ static int saveCustomSticker(char* filename)
 	writeLog("Call to saveCustomSticker...");
 #endif
 
-	// Default (empty) array for empty sticker text
-	unsigned char windowText[STICKER_LENGTH] = {
-		0xF, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-		0xF, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-		0xF, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-		0xF, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
-	};
-
 	// Success status for the custom sticker dump
-	bool status = writeDump(filename, windowText, STICKER_LENGTH);
+	bool status = writeDump(filename, stringTerminator, STICKER_LENGTH);
 
 #ifdef _DEBUG
 	status ? writeLog("saveCustomSticker failed.") : writeLog("saveCustomSticker success.");
@@ -1014,6 +1066,9 @@ static int loadCustomSticker(char* filename)
 
 				// Write the new title to the string value
 				memcpy((void*)stickerPtr, sticker, STICKER_LENGTH);
+
+				// Write the string end line characters to the second row of the pointer
+				memcpy((void*)(stickerPtr + 0x10), stringTerminator, STICKER_LENGTH);
 
 				// Close the file
 				fclose(file);
@@ -1655,17 +1710,16 @@ static int loadSettingsData(char* filepath)
 			// Read all of the contents of the file into storyDataDxp
 			fread(settingsData, fsize, 1, file);
 
-			dumpMemory("settings_pre.bin", settingsPtr, 0x50);
-
 			// Copy the saved settings data from the settings file into the game
 			// memcpy((void*)(settingsPtr + 0x08), (void*)(settingsData + 0x08), (SETTINGS_DATA_SIZE - 0x08)); 
 			// memcpy((void*)(settingsPtr + 0x08), (void*)(settingsData + 0x08), 0x08); // First row (last 2 blocks) (Crash after title update)
 
-			memcpy((void*)(settingsPtr + 0x14), (void*)(settingsData + 0x14), 0x0C); // Second row (last 3 blocks)
+			// Transmission setting is in 0x19 - Carefully importing 0x10 -> 0x1F to avoid it
+			memcpy((void*)(settingsPtr + 0x14), (void*)(settingsData + 0x14), 0x05); // Second row (0x14 -> 0x18)
+			memcpy((void*)(settingsPtr + 0x1A), (void*)(settingsData + 0x1A), 0x06); // Second row (0x1A -> 0x2F)
+			
 			memcpy((void*)(settingsPtr + 0x20), (void*)(settingsData + 0x20), 0x10); // Third row (entire row)
 			memcpy((void*)(settingsPtr + 0x30), (void*)(settingsData + 0x30), 0x10); // Fourth row (entire row)
-
-			dumpMemory("settings_post.bin", settingsPtr, 0x50);
 
 			// Success code
 			status = 0;
@@ -1682,7 +1736,104 @@ static int loadSettingsData(char* filepath)
 	else // File does not exist
 	{
 		// Create the car settings file
-		saveSettingsData(path);
+		saveSettingsData(filepath);
+	}
+
+	// If a non-default custom meter is selected in the drop-down
+	if (strcmp(config["General"]["Custom Meter"].c_str(), "Default") != 0)
+	{
+		// Not sure if I can clean this up, this is just how the MT6 code does the neons
+
+		// Big if-else block for the different meter settings
+
+		if (strcmp(config["General"]["Custom Meter"].c_str(), "White Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x1, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Yellow Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x2, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Red Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x3, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Special Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x4, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Blue Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x5, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Carbon Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x6, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Metallic Meter (Black)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x7, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Metallic Meter (Red)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x8, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Cyber Meter (Blue)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x9, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Cyber Meter (Red)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0xA, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Aluminium Meter (Blue)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0xB, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Aluminium Meter (Red)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0xC, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Camoflage Meter (Green)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0xD, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Camoflage Meter (Brown)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0xE, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Bronze Meter (Red)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0xF, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Bronze Meter (Brown)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x10, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Pirate Meter (Red)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x11, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Pirate Meter (Blue)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x12, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Fire Meter (Red)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x13, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Fire Meter (Blue)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x14, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Silver Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x15, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Gold Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x16, 0x1);
+		
+		/* Undiscovered offsets
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Steampunk Meter (Gold)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x17, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Steampunk Meter (Green)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x18, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Dragon Meter (Gold)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x19, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Dragon Meter (Blue)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x1A, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Light Line Meter (Blue)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x1B, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Light Line Meter (Orange)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x1C, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Digital Black") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x1D, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Digital Blue") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x1E, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "High-End Red") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x1F, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Digital Yellow") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x20, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "High-End Yellow") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x21, 0x1);
+		*/
+	}
+
+	// If a non-default custom soundtrack is selected in the drop-down
+	if (strcmp(config["General"]["Custom Soundtrack"].c_str(), "Default") != 0)
+	{
+		// Not sure if I can clean this up, this is just how the MT6 code does the neons
+
+		// Big if-else block for the different soundtrack settings
+
+		if (strcmp(config["General"]["Custom Soundtrack"].c_str(), "Maximum Tune 3/DX/DX+") == 0)
+			memset((void*)(settingsPtr + 0x28), 0x1, 0x1);
+		else if (strcmp(config["General"]["Custom Soundtrack"].c_str(), "10 Outrun") == 0)
+			memset((void*)(settingsPtr + 0x28), 0x2, 0x1);
+		else if (strcmp(config["General"]["Custom Soundtrack"].c_str(), "Maximum Tune 1/2") == 0)
+			memset((void*)(settingsPtr + 0x28), 0x3, 0x1);
+		else if (strcmp(config["General"]["Custom Soundtrack"].c_str(), "Maximum Tune R") == 0)
+			memset((void*)(settingsPtr + 0x28), 0x4, 0x1);
+		else if (strcmp(config["General"]["Custom Soundtrack"].c_str(), "Maximum Tune 4") == 0)
+			memset((void*)(settingsPtr + 0x28), 0x5, 0x1);
 	}
 
 #ifdef _DEBUG
@@ -1820,6 +1971,35 @@ static int loadStoryData(char* filepath)
 
 			// Read all of the contents of the file into storyDataDxp
 			fread(storyDataDxp, fsize, 1, file);
+
+			// If the chapter 29 fix is enabled
+			if (ToBool(config["General"]["Chapter29Fix"]))
+			{
+				// Check what chapter the player is up to
+
+				// If you are up to chapter 2
+				if (storyDataDxp[0xF0] % 3 == 1)
+				{
+					// Set the first bit in 0xE0 to 1
+					storyDataDxp[0xED] |= 1;
+
+					// Set the value in memory to the updated value
+					// memset((void*)(saveStoryBase + 0xED), storyDataDxp[0xED], 0x1);
+
+					// If we have done all of the other chapters
+					if ((storyDataDxp[0xEC] & 0xE0) == 0xE0)
+					{
+						// Clear the locked final chapter
+						storyDataDxp[0x111] &= ~(0x2);
+
+						// Set the value in memory to the updated value
+						// memset((void*)(saveStoryBase + 0x111), storyDataDxp[0x111], 0x1);
+					}
+
+					// Fix the story tune (to make up for the skipped chapter)
+					fixStoryTune();
+				}
+			}
 
 			// 0x00 - 08 4C - Should be able to use this to figure out what game a save is from
 
