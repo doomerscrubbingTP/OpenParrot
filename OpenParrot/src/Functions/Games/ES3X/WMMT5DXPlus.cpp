@@ -19,7 +19,7 @@
 
 extern LPCSTR hookPort;
 uintptr_t imageBaseDxp;
-static unsigned char hasp_buffer[0xD40];
+static uint8_t hasp_buffer[0xD40];
 static bool isFreePlay;
 static bool isEventMode2P;
 static bool isEventMode4P;
@@ -28,7 +28,7 @@ const char *ipaddrdxplus;
 // MUST DISABLE IC CARD, FFB MANUALLY N MT5DX+
 
 // FOR FREEPLAY
-unsigned char dxpterminalPackage1_Free[79] = {
+uint8_t dxpterminalPackage1_Free[79] = {
 	0x01, 0x04, 0x4B, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x12, 0x12, 0x0C,
@@ -38,7 +38,7 @@ unsigned char dxpterminalPackage1_Free[79] = {
 	0x00, 0x28, 0x00, 0xEC, 0x72, 0x00, 0x41
 };
 
-unsigned char dxpterminalPackage2_Free[139] = {
+uint8_t dxpterminalPackage2_Free[139] = {
 	0x01, 0x04, 0x87, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x14, 0x12, 0x0C,
@@ -53,7 +53,7 @@ unsigned char dxpterminalPackage2_Free[139] = {
 	0x00, 0x28, 0x00, 0x99, 0x4E, 0xC6, 0x14
 };
 
-unsigned char dxpterminalPackage3_Free[79] = {
+uint8_t dxpterminalPackage3_Free[79] = {
 	0x01, 0x04, 0x4B, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x19, 0x12, 0x0C,
@@ -63,7 +63,7 @@ unsigned char dxpterminalPackage3_Free[79] = {
 	0x00, 0x28, 0x00, 0x89, 0x93, 0x3A, 0x22
 };
 
-unsigned char dxpterminalPackage4_Free[139] = {
+uint8_t dxpterminalPackage4_Free[139] = {
 	0x01, 0x04, 0x87, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x2E, 0x12, 0x0C,
@@ -78,7 +78,7 @@ unsigned char dxpterminalPackage4_Free[139] = {
 	0x00, 0x28, 0x00, 0x55, 0x42, 0x47, 0xD5
 };
 
-unsigned char dxpterminalPackage5_Free[79] = {
+uint8_t dxpterminalPackage5_Free[79] = {
 	0x01, 0x04, 0x4B, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x2F, 0x12, 0x0C,
@@ -88,7 +88,7 @@ unsigned char dxpterminalPackage5_Free[79] = {
 	0x00, 0x28, 0x00, 0x9C, 0xC9, 0xE0, 0x73
 };
 
-unsigned char dxpterminalPackage6_Free[139] = {
+uint8_t dxpterminalPackage6_Free[139] = {
 	0x01, 0x04, 0x87, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x6A, 0x12, 0x0C,
@@ -104,7 +104,7 @@ unsigned char dxpterminalPackage6_Free[139] = {
 };
 
 // FOR COIN ENTRY!
-unsigned char dxpterminalPackage1_Coin[75] = {
+uint8_t dxpterminalPackage1_Coin[75] = {
 	0x01, 0x04, 0x47, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x00, 0x2A, 0x12, 0x08, 0x0B, 0x12, 0x0C, 0x32, 0x37,
@@ -114,7 +114,7 @@ unsigned char dxpterminalPackage1_Coin[75] = {
 	0x06, 0x41, 0x0B
 };
 
-unsigned char dxpterminalPackage2_Coin[135] = {
+uint8_t dxpterminalPackage2_Coin[135] = {
 	0x01, 0x04, 0x83, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x00, 0x2A, 0x12, 0x08, 0x39, 0x12, 0x0C, 0x32, 0x37,
@@ -129,7 +129,7 @@ unsigned char dxpterminalPackage2_Coin[135] = {
 	0xF1, 0x0D, 0xB2
 };
 
-unsigned char dxpterminalPackage3_Coin[75] = {
+uint8_t dxpterminalPackage3_Coin[75] = {
 	0x01, 0x04, 0x47, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x00, 0x2A, 0x12, 0x08, 0x3A, 0x12, 0x0C, 0x32, 0x37,
@@ -139,7 +139,7 @@ unsigned char dxpterminalPackage3_Coin[75] = {
 	0x25, 0x31, 0x0D
 };
 
-unsigned char dxpterminalPackage4_Coin[135] = {
+uint8_t dxpterminalPackage4_Coin[135] = {
 	0x01, 0x04, 0x83, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x00, 0x2A, 0x12, 0x08, 0x57, 0x12, 0x0C, 0x32, 0x37,
@@ -154,7 +154,7 @@ unsigned char dxpterminalPackage4_Coin[135] = {
 	0x8B, 0x15, 0xCB
 };
 
-unsigned char dxpterminalPackage5_Coin[79] = {
+uint8_t dxpterminalPackage5_Coin[79] = {
 	0x01, 0x04, 0x4B, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x58, 0x12, 0x0C,
@@ -164,7 +164,7 @@ unsigned char dxpterminalPackage5_Coin[79] = {
 	0x00, 0x28, 0x00, 0x3E, 0xB1, 0xB7, 0x22
 };
 
-unsigned char dxpterminalPackage6_Coin[139] = {
+uint8_t dxpterminalPackage6_Coin[139] = {
 	0x01, 0x04, 0x87, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x77, 0x12, 0x0C,
@@ -180,7 +180,7 @@ unsigned char dxpterminalPackage6_Coin[139] = {
 };
 
 //Event mode 2P
-unsigned char dxpterminalPackage1_Event4P[79] = {
+uint8_t dxpterminalPackage1_Event4P[79] = {
 	0x01, 0x04, 0x44, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
 	0x08, 0xd1, 0x0b, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
@@ -189,7 +189,7 @@ unsigned char dxpterminalPackage1_Event4P[79] = {
 	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0xc1, 0x96, 0xc9, 0x2e
 };
 
-unsigned char dxpterminalPackage2_Event4P[139] = {
+uint8_t dxpterminalPackage2_Event4P[139] = {
 	0x01, 0x04, 0x80, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
 	0x08, 0xd2, 0x0b, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
@@ -204,7 +204,7 @@ unsigned char dxpterminalPackage2_Event4P[139] = {
 
 };
 
-unsigned char dxpterminalPackage3_Event4P[79] = {
+uint8_t dxpterminalPackage3_Event4P[79] = {
 	0x01, 0x04, 0x44, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
 	0x08, 0x8d, 0x0c, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
@@ -213,7 +213,7 @@ unsigned char dxpterminalPackage3_Event4P[79] = {
 	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0x86, 0xb1, 0x27, 0x9e
 };
 
-unsigned char dxpterminalPackage4_Event4P[139] = {
+uint8_t dxpterminalPackage4_Event4P[139] = {
 	0x01, 0x04, 0x80, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
 	0x08, 0x8e, 0x0c, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
@@ -228,7 +228,7 @@ unsigned char dxpterminalPackage4_Event4P[139] = {
 
 };
 
-unsigned char dxpterminalPackage5_Event4P[79] = {
+uint8_t dxpterminalPackage5_Event4P[79] = {
 	0x01, 0x04, 0x44, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
 	0x08, 0xc9, 0x0c, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
@@ -237,7 +237,7 @@ unsigned char dxpterminalPackage5_Event4P[79] = {
 	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0x5d, 0x49, 0x01, 0x1e
 };
 
-unsigned char dxpterminalPackage6_Event4P[139] = {
+uint8_t dxpterminalPackage6_Event4P[139] = {
 	0x01, 0x04, 0x80, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
 	0x08, 0xca, 0x0c, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
@@ -253,7 +253,7 @@ unsigned char dxpterminalPackage6_Event4P[139] = {
 
 
 //Event mode 2P
-unsigned char dxpterminalPackage1_Event2P[79] = {
+uint8_t dxpterminalPackage1_Event2P[79] = {
 	0x01, 0x04, 0x44, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
 	0x08, 0xfe, 0x0e, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
@@ -262,7 +262,7 @@ unsigned char dxpterminalPackage1_Event2P[79] = {
 	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0xaf, 0xa1, 0x42, 0x3d
 };
 
-unsigned char dxpterminalPackage2_Event2P[139] = {
+uint8_t dxpterminalPackage2_Event2P[139] = {
 	0x01, 0x04, 0x80, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
 	0x08, 0xff, 0x0e, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
@@ -277,7 +277,7 @@ unsigned char dxpterminalPackage2_Event2P[139] = {
 
 };
 
-unsigned char dxpterminalPackage3_Event2P[79] = {
+uint8_t dxpterminalPackage3_Event2P[79] = {
 	0x01, 0x04, 0x44, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
 	0x08, 0x80, 0x0f, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
@@ -286,7 +286,7 @@ unsigned char dxpterminalPackage3_Event2P[79] = {
 	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0xa3, 0x94, 0x12, 0x9b
 };
 
-unsigned char dxpterminalPackage4_Event2P[139] = {
+uint8_t dxpterminalPackage4_Event2P[139] = {
 	0x01, 0x04, 0x80, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
 	0x08, 0x8d, 0x0f, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
@@ -301,7 +301,7 @@ unsigned char dxpterminalPackage4_Event2P[139] = {
 
 };
 
-unsigned char dxpterminalPackage5_Event2P[79] = {
+uint8_t dxpterminalPackage5_Event2P[79] = {
 	0x01, 0x04, 0x44, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
 	0x08, 0x8e, 0x0f, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
@@ -310,7 +310,7 @@ unsigned char dxpterminalPackage5_Event2P[79] = {
 	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0xa3, 0xc2, 0x27, 0x9c
 };
 
-unsigned char dxpterminalPackage6_Event2P[139] = {
+uint8_t dxpterminalPackage6_Event2P[139] = {
 	0x01, 0x04, 0x80, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
 	0x08, 0xf0, 0x0e, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
@@ -328,7 +328,7 @@ unsigned char dxpterminalPackage6_Event2P[139] = {
 // and debug functions will be included in
 // the compilation
 
-// #define _DEBUG
+#define _DEBUG
 
 #define HASP_STATUS_OK 0
 unsigned int hook_hasp_login(int feature_id, void* vendor_code, int hasp_handle) {
@@ -345,14 +345,14 @@ unsigned int hook_hasp_logout(int hasp_handle) {
 	return HASP_STATUS_OK;
 }
 
-unsigned int hook_hasp_encrypt(int hasp_handle, unsigned char* buffer, unsigned int buffer_size) {
+unsigned int hook_hasp_encrypt(int hasp_handle, uint8_t* buffer, unsigned int buffer_size) {
 #ifdef _DEBUG
 	OutputDebugStringA("hasp_encrypt");
 #endif
 	return HASP_STATUS_OK;
 }
 
-unsigned int hook_hasp_decrypt(int hasp_handle, unsigned char* buffer, unsigned int buffer_size) {
+unsigned int hook_hasp_decrypt(int hasp_handle, uint8_t* buffer, unsigned int buffer_size) {
 #ifdef _DEBUG
 	OutputDebugStringA("hasp_decrypt");
 #endif
@@ -367,7 +367,7 @@ unsigned int hook_hasp_get_size(int hasp_handle, int hasp_fileid, unsigned int* 
 	return HASP_STATUS_OK;
 }
 
-unsigned int hook_hasp_read(int hasp_handle, int hasp_fileid, unsigned int offset, unsigned int length, unsigned char* buffer) {
+unsigned int hook_hasp_read(int hasp_handle, int hasp_fileid, unsigned int offset, unsigned int length, uint8_t* buffer) {
 #ifdef _DEBUG
 	OutputDebugStringA("hasp_read");
 #endif
@@ -375,7 +375,7 @@ unsigned int hook_hasp_read(int hasp_handle, int hasp_fileid, unsigned int offse
 	return HASP_STATUS_OK;
 }
 
-unsigned int hook_hasp_write(int hasp_handle, int hasp_fileid, unsigned int offset, unsigned int length, unsigned char* buffer) {
+unsigned int hook_hasp_write(int hasp_handle, int hasp_fileid, unsigned int offset, unsigned int length, uint8_t* buffer) {
 #ifdef _DEBUG
 	OutputDebugStringA("hasp_write");
 #endif
@@ -430,6 +430,9 @@ bool WINAPI Hook_SetSystemTime(SYSTEMTIME* in)
 // Maximum sticker length (32 bytes, 8 characters)
 #define STICKER_LENGTH 0x10
 
+// Maximum region length (3 characters)
+#define REGION_LENGTH 0x3
+
 // Maximum title length (16 Characters)
 #define TITLE_LENGTH 0x10
 
@@ -453,23 +456,29 @@ bool WINAPI Hook_SetSystemTime(SYSTEMTIME* in)
 // Car Data Offset (Within Save Data Region)
 #define CAR_OFFSET 0x268
 
-// *** Unsigned Char (Memory Storage) Objects ***
+// *** uint8_t (Memory Storage) Objects ***
 
 // Row which is used to end the sticker region
 // Without this written to the sticker second row, 
 // the sticker does not display.
-unsigned char stringTerminator[0x10] = {
+uint8_t stringTerminator[0x10] = {
 	0x0F, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 	0x0F, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
 };
 
+// Car save data reserved memory
+uint8_t carDataDxp[CAR_DATA_SIZE];
+
 // Car code of the selected car (in the menu)
-unsigned char selectedCarCodeDxp;
+uint8_t selectedCarCodeDxp;
 
 // *** Char Array (String) Variables ***
 
 // Sticker filename string
 char stickerFileNameDxp[FILENAME_MAX];
+
+// Region filename string
+char regionFileNameDxp[FILENAME_MAX];
 
 // Title filename string
 char titleFileNameDxp[FILENAME_MAX];
@@ -566,7 +575,7 @@ static int writeLog(std::string message)
 	return writeMessage(logfile, message, true, true);
 }
 
-// writeMemory(memory: uintptr_t, value: unsigned char, size: size_t, force: bool): Void
+// writeMemory(memory: uintptr_t, value: uint8_t, size: size_t, force: bool): Void
 // Given a memory address, a value and a size sets every empty b
 static void writeMemory(uintptr_t memory, int value, size_t size, bool force = false)
 {
@@ -598,12 +607,12 @@ static void writeMemory(uintptr_t memory, int value, size_t size, bool force = f
 }
 #endif
 
-// writeDump(filename: Char*, data: unsigned char *, size: size_t): Int
+// writeDump(filename: Char*, data: uint8_t *, size: size_t): Int
 // Given a filename, a data buffer pointer and a size dumps 'size' data
 // from 'data' to the filename provided by 'filename'. This code is used
 // for most of the saving routines, and is not just for dev purposes. 
 // Returns a status code of 0 if successful, and a code of 1 if failed.
-static int writeDump(char* filename, unsigned char* data, size_t size)
+static int writeDump(char* filename, uint8_t* data, size_t size)
 {
 #ifdef _DEBUG
 	writeLog("Call to writeDump...");
@@ -647,7 +656,7 @@ static int dumpMemory(char* filename, uintptr_t memory, size_t size)
 #endif
 
 	// Create the array to dump the memory data to
-	unsigned char* data = (unsigned char*)malloc(size);
+	uint8_t* data = (uint8_t*)malloc(size);
 
 	// Success/failure status
 	bool status = 1;
@@ -1381,6 +1390,245 @@ static int loadCustomTitle(char* filename)
 	return status;
 }
 
+#ifdef _DEBUG
+
+// saveCustomRegion(filepath: char*): Int
+// Saves the custom title value to the current car's title, 
+// otherwise creates a default title.
+static int saveCustomRegion(char* filename)
+{
+#ifdef _DEBUG
+	writeLog("Call to saveCustomRegion...");
+#endif
+
+	// Open the file for the region
+	FILE* file = fopen(filename, "w+");
+
+	// Status code (Default fail)
+	bool status = 1;
+
+	// Create the region array
+	char region[REGION_LENGTH];
+
+	// Empty the region array
+	memset(region, 0x0, REGION_LENGTH);
+
+	// Write the default region to the string
+	sprintf(region, "JPN");
+
+	// File is opened successfully
+	if (file)
+	{
+		// Write the region string to the file
+		fwrite((void*)region, 1, REGION_LENGTH, file);
+
+		// Close the file handle
+		fclose(file);
+
+		// Success
+		status = 0;
+	}
+
+#ifdef _DEBUG
+	status ? writeLog("saveCustomRegion failed.") : writeLog("saveCustomRegion success.");
+#endif
+
+	// Return status code
+	return status;
+}
+
+// loadCustomTitle(filepath: char*): Int
+// Loads the title string from the title file for the given car.
+static int loadCustomRegion(char* filename)
+{
+#ifdef _DEBUG
+	writeLog("Call to loadCustomRegion...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// Address where the title is saved
+	uintptr_t regionPtr = *(uintptr_t*)(carSaveBase + 0xF8);
+
+	// Success status (default: Failed to open file)
+	int status = 1;
+
+	// Custom title file does not exist
+	if (!(FileExists(filename)))
+	{
+		// Save the custom title
+		saveCustomRegion(filename);
+	}
+	else // Custom title file does not exist
+	{
+		// Open the file with the file name
+		FILE* file = fopen(filename, "rb");
+
+		// File is opened successfully
+		if (file)
+		{
+			// Get the length of the file
+			fseek(file, 0, SEEK_END);
+			int fsize = ftell(file);
+
+			// If the file has the right size
+			if (fsize == REGION_LENGTH)
+			{
+				// writeDump("region_pre.bin", )
+				dumpMemory("region_pre.bin", regionPtr, 0x200);
+
+				// Reset to start of the file 
+				// and read it into the car 
+				// data variable
+				fseek(file, 0, SEEK_SET);
+
+				// Title string storage
+				char region[REGION_LENGTH];
+
+				// Empty the title array
+				memset(region, 0x0, REGION_LENGTH);
+
+				// Read the string content from the file
+				fread(region, 0x1, REGION_LENGTH, file);
+
+				// Empty the existing title content
+				memset((void*)regionPtr, 0x0, REGION_LENGTH);
+
+				// Write the new title to the string value
+				memcpy((void*)regionPtr, region, REGION_LENGTH);
+
+				dumpMemory("region_post.bin", regionPtr, 0x200);
+
+				// Close the file
+				fclose(file);
+
+				// Success
+				status = 0;
+			}
+			else // Title file is wrong size
+			{
+				// Incorrect file size 
+				status = 2;
+			}
+		}
+	}
+
+#ifdef _DEBUG
+	switch (status)
+	{
+	case 0: // Success
+		writeLog("loadCustomRegion success.");
+		break;
+	case 1: // No file
+		writeLog("loadCustomRegion failed: No file. Default file created.");
+		break;
+	case 2: // File wrong size
+		writeLog("loadCustomRegion failed: Wrong file size.");
+		break;
+	default: // Generic error
+		writeLog("loadCustomRegion failed.");
+		break;
+	}
+#endif
+
+	// Return status code
+	return status;
+}
+
+#endif
+
+// verifyCarData(void): Int
+// Compares the data in the loaded car data to the 
+// data which is to be saved, to ensure that the new data
+// has not been corrupted. This has been implemented as 
+// a fix for a bug which was overwriting save files with
+// junk data after entering the test menu during versus mode.
+static int verifyCarData()
+{
+#ifdef _DEBUG
+	writeLog("Call to verifyCarData...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// Array which stores the offsets which should
+	// be loaded and their purpose for car data.
+	uint8_t offsets[] = {
+
+		0x08, 0x0C, 0x10, 0x14, 
+		0x18, 0x1C, 0x24, 0x28, 
+		0x2C, 0x30, 0x34, 0x3C,	
+		0x40, 0x44, 0x48, 0x4C, 
+		0x54, 0x58, 0x5C, 0x60, 
+		0x64, 0x6C, 0x70, 0x78, 
+		0x7C, 0x80, 0x84, 0x88, 
+		0x8C, 0x90, 0x94, 0x98, 
+		0x9C, 0xA0, 0xA4, 0xA8, 
+		0xAC, 0xB4, 0xB8, 0xBC, 
+		0xC0, 0xC4, 0xD0, 0xD4, 
+		0xD8, 0xDC, 0xE0, 0xE4, 
+		0xEC, 0xF0, 0xF4, 0xFC
+	};
+
+	// Function validation status (default: invalid)
+	bool status = 1;
+
+	// Get the number of items in the offsets list
+	uint32_t count = sizeof(offsets) / sizeof(*offsets);
+
+	// Get the total value of the element(s)
+	// If this is greater than zero, the car will be saved
+	// If it is less than zero, it will not be saved
+	int total = 0;
+
+	// Loop over all of the offsets
+	for (int i = 0; i < count; i++)
+	{
+		// Get the offset from the list
+		uint8_t offset = offsets[i];
+
+		// Get the current value in memory for the offset
+		uint32_t value = injector::ReadMemory<uint32_t>(carSaveBase + offset);
+
+		// Add the value to the total
+		total += value;
+	}
+
+	// If the total is greater than zero
+	if (total > 0)
+	{
+		// Car has not been zeroed, save ok
+		status = 0;
+	}
+	else // Total is not greater than zero
+	{
+		// Car has been zeroed, save not ok
+
+		// In the exceptional circumstance that
+		// a car could have this result genuinely, 
+		// there would be no consequences to not 
+		// saving its data anyway (as there is no 
+		// relevant data to save).
+
+		// Status remains 1
+	}
+
+#ifdef _DEBUG
+	status ? writeLog("verifyCarData validation failed.") : writeLog("verifyCarData validation success.");
+#endif
+
+	// Return status code
+	return status;
+}
+
 // loadCarFile(filename: char*): Int
 // Given a filename, loads the data from
 // the car file into memory. 
@@ -1390,8 +1638,11 @@ static int loadCarFile(char* filename)
 	writeLog("Call to loadCarFile...");
 #endif
 
-	// Car save data reserved memory
-	unsigned char carDataDxp[CAR_DATA_SIZE];
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
 
 	// Car Profile saving
 	memset(carDataDxp, 0, CAR_DATA_SIZE);
@@ -1415,12 +1666,6 @@ static int loadCarFile(char* filename)
 			// Reset to start of the file and read it into the car data variable
 			fseek(file, 0, SEEK_SET);
 			fread(carDataDxp, fsize, 1, file);
-
-			// Address where player save data starts
-			uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
-
-			// Address where car save data starts
-			uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
 
 			// memcpy((void*)(carSaveBase + 0x00), carDataDxp + 0x00, 8); // Crash (Pointer)
 			// memcpy((void*)(carSaveBase + 0x08), carDataDxp + 0x08, 8); // ??
@@ -1467,19 +1712,6 @@ static int loadCarFile(char* filename)
 			memcpy((void*)(carSaveBase + 0xF0), carDataDxp + 0xF0, 8); // ??
 			// memcpy((void*)(carSaveBase + 0xF8), carDataDxp + 0xF8, 8); // Crash (Region Pointer) (F8)
 
-/*
-#ifdef _DEBUG
-			// Clear the aura region
-			memset(customAuraDxp, 0x0, 0x2);
-
-			// Copy the aura to the aura save data
-			memcpy(customAuraDxp, carDataDxp + 0xF0, 0x2);
-
-			// Create the spam custom aura thread
-			CreateThread(0, 0, spamCustomAura, 0, 0, 0);
-#endif
-*/
-
 			// Success
 			status = 0;
 		}
@@ -1494,6 +1726,11 @@ static int loadCarFile(char* filename)
 
 		// Close the file
 		fclose(file);
+	}
+	else // File not loaded
+	{
+		// Dump the current car memory to carDataDxp
+		memcpy((void*)carDataDxp, (void*)carSaveBase, CAR_DATA_SIZE);
 	}
 
 #ifdef _DEBUG
@@ -1583,6 +1820,9 @@ static int loadCarData(char * filepath)
 		sprintf(titleFileNameDxp, "%s\\%08X.title", path, selectedCarCodeDxp);
 
 		// Get the path to the specific car title file
+		sprintf(regionFileNameDxp, "%s\\%08X.region", path, selectedCarCodeDxp);
+
+		// Get the path to the specific car title file
 		sprintf(stickerFileNameDxp, "%s\\%08X.sticker", path, selectedCarCodeDxp);
 
 		// If the specific car file exists
@@ -1593,11 +1833,14 @@ static int loadCarData(char * filepath)
 		}
 	}
 
+	// Load the custom name file
+	loadCustomName(nameFileNameDxp);
+
 	// Load the custom title file
 	loadCustomTitle(titleFileNameDxp);
 
-	// Load the custom name file
-	loadCustomName(nameFileNameDxp);
+	// Load the custom region file
+	loadCustomRegion(regionFileNameDxp);
 
 	// Load the custom sticker file
 	loadCustomSticker(stickerFileNameDxp);
@@ -1662,7 +1905,7 @@ static int loadSettingsData(char* filepath)
 #endif
 
 	// Save data dump memory block
-	unsigned char settingsData[SETTINGS_DATA_SIZE];
+	uint8_t settingsData[SETTINGS_DATA_SIZE];
 
 	// Zero out the save data array
 	memset(settingsData, 0x0, SETTINGS_DATA_SIZE);
@@ -1924,7 +2167,7 @@ static int loadStoryData(char* filepath)
 #endif
 
 	// Save data dump memory block
-	unsigned char storyDataDxp[STORY_DATA_SIZE];
+	uint8_t storyDataDxp[STORY_DATA_SIZE];
 
 	// Zero out the save data array
 	memset(storyDataDxp, 0x0, STORY_DATA_SIZE);
@@ -2007,25 +2250,35 @@ static int loadStoryData(char* filepath)
 			// (Mostly) discovered story data
 
 			memcpy((void*)(saveStoryBase + 0x48), storyDataDxp + 0x48, 0x8); // Story Bit
-			memcpy((void*)(saveStoryBase + 0xE0), storyDataDxp + 0xE0, 0x8); // ??
-			memcpy((void*)(saveStoryBase + 0xE8), storyDataDxp + 0xE8, 0x8); // Chapter Progress (0xE8) (Bitmask)
+			memcpy((void*)(saveStoryBase + 0xE0), storyDataDxp + 0xE0, 0x8); // Story Play Count (0xE0)
+			memcpy((void*)(saveStoryBase + 0xE8), storyDataDxp + 0xE8, 0x8); // Tuning Points (0xE8), Chapter Progress Bitmask (0xEC)
 			memcpy((void*)(saveStoryBase + 0xF0), storyDataDxp + 0xF0, 0x8); // Current Chapter (0xF0), Total Wins (0xF4)
-			memcpy((void*)(saveStoryBase + 0xF8), storyDataDxp + 0xF8, 0x8); // ??
+			memcpy((void*)(saveStoryBase + 0xF8), storyDataDxp + 0xF8, 0x8); // Lose bits (0xF4) (??), Lose (0xF8) (??)
 			memcpy((void*)(saveStoryBase + 0x100), storyDataDxp + 0x100, 0x8); // Win Streak (0x104)
 			memcpy((void*)(saveStoryBase + 0x108), storyDataDxp + 0x108, 0x8); // ??
 			memcpy((void*)(saveStoryBase + 0x110), storyDataDxp + 0x110, 0x8); // Locked Chapters (0x110) (Bitmask)
 			
-			// Can't tell if the data past this point does anything
-			
-			// memcpy((void*)(saveStoryBase + 0x118), storyDataDxp + 0x118, 0x8); // ??
-			// memcpy((void*)(saveStoryBase + 0x120), storyDataDxp + 0x120, 0x8); // ??
-			// memcpy((void*)(saveStoryBase + 0x128), storyDataDxp + 0x128, 0x8); // ??
-			// memcpy((void*)(saveStoryBase + 0x130), storyDataDxp + 0x130, 0x8); // ??
-			// memcpy((void*)(saveStoryBase + 0x138), storyDataDxp + 0x138, 0x8); // ??
-			// memcpy((void*)(saveStoryBase + 0x140), storyDataDxp + 0x140, 0x8); // ??
-			// memcpy((void*)(saveStoryBase + 0x148), storyDataDxp + 0x148, 0x8); // ??
-			// memcpy((void*)(saveStoryBase + 0x150), storyDataDxp + 0x150, 0x8); // ??
-			// memcpy((void*)(saveStoryBase + 0x158), storyDataDxp + 0x158, 0x8); // ??
+			// (Mostly) discovered time attack data
+			// This is where the time attack data gets stored, BEFORE it gets cleared.
+			// Unfortunately, we can't do much with this currently without finding out
+			// where it gets stashed after the time attack screen ends.
+
+			// Time Attack Offsets:
+			// 0x188 - Final Time in Milliseconds
+			// 0x18C - ??
+			// 0x194 - Sector 1 time in ms
+			// 0x198 - Sector 2 time in ms
+			// 0x19C - Sector 3 time in ms
+			// 0x1A0 - Sector 4 time in ms
+			// 0x1A4 - Sector 5 time in ms (not verified)
+			// 0x1A8 - Sector 6 time in ms (not verified)
+			// 0x1AC - Sector 7 time in ms (not verified)
+			// 0x1C0 - Pointer (??)
+			// 0x1C8 - TA Games Played (This Session)
+			// 0x1D8 - ??
+			// 0x1DC - ??
+			// 0x1E0 - ??
+			// 0x1E4 - Course ID (enum)
 
 			// Save data loaded successfully
 			loadOkDxp = true;
@@ -2055,6 +2308,12 @@ static int loadStoryData(char* filepath)
 
 			// Set the current chapter to 3 (3 Chapters cleared)
 			memset((void*)(saveStoryBase + 0xF0), 0x3, 0x1);
+
+			// Offsets for the locked chapter bitmask
+			memset((void*)(saveStoryBase + 0x110), 0x10, 0x1); // Chapter 5 locked
+			memset((void*)(saveStoryBase + 0x111), 0x42, 0x1); // Chapters 10, 15 locked
+			memset((void*)(saveStoryBase + 0x112), 0x08, 0x1); // Chapter 20 locked
+			memset((void*)(saveStoryBase + 0x113), 0x00, 0x1); // Empty space
 		}
 	}
 
@@ -2125,7 +2384,7 @@ static int loadMileData(char* filepath)
 #endif
 
 	// Mile data dump memory block
-	unsigned char mileData[MILE_DATA_SIZE];
+	uint8_t mileData[MILE_DATA_SIZE];
 	
 	// Zero out the mile data memory
 	memset(mileData, 0x0, MILE_DATA_SIZE);
@@ -2301,7 +2560,7 @@ static int loadVersusData(char* filepath)
 #endif
 
 	// Star data dump memory block
-	unsigned char versusData[VERSUS_DATA_SIZE];
+	uint8_t versusData[VERSUS_DATA_SIZE];
 
 	// Clear star data memory
 	memset(versusData, 0, VERSUS_DATA_SIZE);
@@ -2484,72 +2743,79 @@ static int saveGameData()
 #ifdef _DEBUG
 	writeLog("Call to saveGameData...");
 #endif
+	
+	// Success/fail code (default: fail)
+	int status = 1;
 
-	// Saving is disabled
-	if (!saveOk)
-		return 1;
-
-	// Miles path string
-	char path[FILENAME_MAX];
-
-	// Set the path memory to zero
-	memset(path, 0, FILENAME_MAX);
-
-	// Write the '.' into the load path
-	sprintf(path, ".");
-
-	// Seperate save file / cars per user profile
-	if (ToBool(config["Save"]["Save Per Custom Name"]))
+	// If saving is enabled, 
+	// and the car data is verified
+	if (saveOk && (verifyCarData() == 0))
 	{
-		// Get the profile name from the 
-		std::string name = config["General"]["CustomName"];
+		// Miles path string
+		char path[FILENAME_MAX];
 
-		// Add the c string version of the profile name to the path
-		sprintf(path, "%s\\%s", path, name.c_str());
-	}
+		// Set the path memory to zero
+		memset(path, 0, FILENAME_MAX);
 
-	// Seperate miles / story per car
-	if (ToBool(config["Save"]["Save Per Car"]))
-	{
-		// Need to get the hex code for the selected car
+		// Write the '.' into the load path
+		sprintf(path, ".");
 
-		// If custom car is set
-		if (customCarDxp)
+		// Seperate save file / cars per user profile
+		if (ToBool(config["Save"]["Save Per Custom Name"]))
 		{
-			// Add the car id to the save path
-			sprintf(path, "%s\\custom", path);
+			// Get the profile name from the 
+			std::string name = config["General"]["CustomName"];
+
+			// Add the c string version of the profile name to the path
+			sprintf(path, "%s\\%s", path, name.c_str());
 		}
-		else // Custom car is not set
+
+		// Seperate miles / story per car
+		if (ToBool(config["Save"]["Save Per Car"]))
 		{
-			// Add the custom folder to the save path
-			sprintf(path, "%s\\%08X", path, selectedCarCodeDxp);
-		}
+			// Need to get the hex code for the selected car
+
+			// If custom car is set
+			if (customCarDxp)
+			{
+				// Add the car id to the save path
+				sprintf(path, "%s\\custom", path);
+			}
+			else // Custom car is not set
+			{
+				// Add the custom folder to the save path
+				sprintf(path, "%s\\%08X", path, selectedCarCodeDxp);
+			}
+			}
+
+		// Ensure the directory exists
+		std::filesystem::create_directories(path);
+
+		// Load the car save file
+		saveCarData(path);
+
+		// Load the openprogress.sav file
+		saveStoryData(path);
+
+		// Load the miles save file
+		saveMileData(path);
+
+		// Load the miles save file
+		saveVersusData(path);
+
+		// Disable saving
+		saveOk = false;
+
+		// Success
+		status = 0;
 	}
-
-	// Ensure the directory exists
-	std::filesystem::create_directories(path);
-
-	// Load the car save file
-	saveCarData(path);
-
-	// Load the openprogress.sav file
-	saveStoryData(path);
-
-	// Load the miles save file
-	saveMileData(path);
-
-	// Load the miles save file
-	saveVersusData(path);
-
-	// Disable saving
-	saveOk = false;
 
 #ifdef _DEBUG
-	writeLog("saveGameData done.");
+	status ? writeLog("saveGameData failed.") : writeLog("saveGameData success.");
 #endif
 
 	// Success
-	return 0;
+	return status;
 }
 
 static void loadGame()
