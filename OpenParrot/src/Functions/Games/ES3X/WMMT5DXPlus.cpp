@@ -23,7 +23,7 @@ static uint8_t hasp_buffer[0xD40];
 static bool isFreePlay;
 static bool isEventMode2P;
 static bool isEventMode4P;
-const char *ipaddrdxplus;
+const char* ipaddrdxplus;
 
 // MUST DISABLE IC CARD, FFB MANUALLY N MT5DX+
 
@@ -184,7 +184,7 @@ uint8_t dxpterminalPackage1_Event4P[79] = {
 	0x01, 0x04, 0x44, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
 	0x08, 0xd1, 0x0b, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
-	0x39, 0x30, 0x30, 0x30, 0x32, 0x18, 0x00, 0x30, 0x00, 0x4a, 0x08, 0x08, 
+	0x39, 0x30, 0x30, 0x30, 0x32, 0x18, 0x00, 0x30, 0x00, 0x4a, 0x08, 0x08,
 	0x03, 0x10, 0x01, 0x18, 0x00, 0x20, 0x00, 0x52, 0x0b, 0x08, 0x64, 0x10,
 	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0xc1, 0x96, 0xc9, 0x2e
 };
@@ -328,7 +328,7 @@ uint8_t dxpterminalPackage6_Event2P[139] = {
 // and debug functions will be included in
 // the compilation
 
-#define _DEBUG
+// #define _DEBUG
 
 #define HASP_STATUS_OK 0
 unsigned int hook_hasp_login(int feature_id, void* vendor_code, int hasp_handle) {
@@ -363,7 +363,7 @@ unsigned int hook_hasp_get_size(int hasp_handle, int hasp_fileid, unsigned int* 
 #ifdef _DEBUG
 	OutputDebugStringA("hasp_get_size");
 #endif
-	*hasp_size = 0xD40; // Max addressable size by the game... absmax is 4k
+	* hasp_size = 0xD40; // Max addressable size by the game... absmax is 4k
 	return HASP_STATUS_OK;
 }
 
@@ -424,6 +424,12 @@ bool WINAPI Hook_SetSystemTime(SYSTEMTIME* in)
 
 // Car region load/save size
 #define CAR_DATA_SIZE 0xFF
+
+// GT Wing load/save size
+#define GTWING_DATA_SIZE 0x30
+
+// Car mini sticker load/save size
+#define MINI_STICKER_DATA_SIZE 0xA4
 
 // String File Lengths
 
@@ -489,6 +495,18 @@ char nameFileNameDxp[FILENAME_MAX];
 // Car filename string
 char carFileNameDxp[FILENAME_MAX];
 
+// GT Womg filename string
+char gtWingFileNameDxp[FILENAME_MAX];
+
+// Mini Sticker filename string
+char miniStickFileNameDxp[FILENAME_MAX];
+
+// Custom name (i.e. Scrubbs)
+char customNameDxp[256];
+
+// Car name (i.e. G U E S T)
+char carNameDxp[NAME_LENGTH];
+
 // *** Boolean Variables ***
 
 // Sets if saving is allowed or not
@@ -506,6 +524,19 @@ static int SaveOk()
 {
 	saveOk = true;
 	return 1;
+}
+
+// Returns the current system time
+static tm getCurrentTime()
+{
+	// Create a new std::time object
+	auto t = std::time(nullptr);
+
+	// Get the local system time
+	auto time = *std::localtime(&t);
+
+	// Return the time object
+	return time;
 }
 
 // Functions in this are are only used in debug mode
@@ -533,12 +564,11 @@ static int writeMessage(std::string filename, std::string message, bool timestam
 		// If timestamp switch is applied
 		if (timestamp)
 		{
-			// Get the current time
-			auto t = std::time(nullptr);
-			auto tm = *std::localtime(&t);
+			// Get the current system time
+			tm currentTime = getCurrentTime();
 
 			// Add the timestamp to the message
-			eventLog << "[" << std::put_time(&tm, "%d-%m-%Y %H-%M-%S") << "] ";
+			eventLog << "[" << std::put_time(&currentTime, "%d-%m-%Y %H-%M-%S") << "] ";
 		}
 
 		// Write the message to the file
@@ -878,8 +908,8 @@ static int setFullTune()
 
 	// Get the memory addresses for the car base save, power and handling values
 	auto carSaveBase = (uintptr_t*)(*(uintptr_t*)(imageBaseDxp + SAVE_OFFSET) + CAR_OFFSET);
-	auto powerAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase) + 0xAC); // Power offset
-	auto handleAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase) + 0xB8); // Handling offset
+	auto powerAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase)+0xAC); // Power offset
+	auto handleAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase)+0xB8); // Handling offset
 
 	// Dereference the power value from the memory address
 	auto powerValue = injector::ReadMemory<uint8_t>(powerAddress, true);
@@ -933,43 +963,201 @@ static DWORD WINAPI spamFullTune(void* pArguments)
 #endif
 }
 
-/*
-#ifdef _DEBUG
-// Custom aura (2 bytes)
-char customAuraDxp[2];
-
-static DWORD WINAPI spamCustomAura(LPVOID)
+// saveTimeAttackData(filepath: char*): Int
+// Given a filepath, saves the time attack data
+// from the current play session to a file in 
+// memory.
+static int saveTimeAttackRecord(char* filename)
 {
-	writeLog("Call to spamCustomAura...");
-
+#ifdef _DEBUG
+	writeLog("Call to saveTimeAttackRecord...");
+#endif
 
 	// Address where player save data starts
 	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
 
-	// Address where car save data starts
+	// Address where the  car save data starts
 	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
 
-	// Watch the car memory save region
-	watchMemory("car_dump", carSaveBase, 0x100, 15);
+	// Add the time attack offset to the story pointer
+	uintptr_t timeAttackPtr = *(uintptr_t*)(savePtr + STORY_OFFSET) + 0x180;
+
+	// Status code boolean
+	bool status = 1;
+
+	// Time Attack output stream
+	std::ofstream taOfstream;
+
+	// Open the time attack file for appending
+	taOfstream.open(std::string(filename), std::ios_base::app);
+
+	// If the filestream opens successfully
+	if (taOfstream.is_open())
+	{
+		// Write the time attack data to a new row in the file
+
+		// (Mostly) discovered time attack data
+		// This is where the time attack data gets stored, BEFORE it gets cleared.
+		// Unfortunately, we can't do much with this currently without finding out
+		// where it gets stashed after the time attack screen ends.
+
+		// Time Attack Offsets:
+		// 0x188 - Final Time in Milliseconds
+		// 0x18C - ??
+		// 0x194 - Sector 1 time in ms
+		// 0x198 - Sector 2 time in ms
+		// 0x19C - Sector 3 time in ms
+		// 0x1A0 - Sector 4 time in ms
+		// 0x1A4 - Sector 5 time in ms (not verified)
+		// 0x1A8 - Sector 6 time in ms (not verified)
+		// 0x1AC - Sector 7 time in ms (not verified)
+		// 0x1C0 - Pointer (??)
+		// 0x1C8 - TA Games Played (This Session)
+		// 0x1D8 - ??
+		// 0x1DC - ??
+		// 0x1E0 - ??
+		// 0x1E4 - Course ID (enum)
+
+		// Output Format:
+		// 1. Time Submitted (time_t)
+		// 2. Custom Name (e.g. Scrubbs)
+		// 3. Car Name (e.g. G U E S T)
+		// 4. Car ID (e.g. 0x7F)
+		// 5. Course ID (e.g. 0x15)
+		// 6. Final Time
+		// 7. Sector 1 (ms)
+		// 8. Sector 2 (ms)
+		// 9. Sector 3 (ms)
+		// 10. Sector 4 (ms)
+		// 11. Sector 5 (ms)
+		// 12. Sector 6 (ms)
+		// 13. Sector 7 (ms)
+
+		// Get the car code from the car save region
+		uint8_t carCode = injector::ReadMemory<uint8_t>(carSaveBase + 0x34, true);
+
+		// Get the course code from the time attack save region
+		uint8_t courseCode = injector::ReadMemory<uint8_t>(timeAttackPtr + 0x64, true);
+
+		// Sector times
+		uint32_t sectors[8] = {
+
+			// 0x188 - Final Time in Milliseconds
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x08, true),
+
+			// 0x194 - Sector 1 time in ms
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x14, true),
+
+			// 0x198 - Sector 2 time in ms
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x18, true),
+
+			// 0x198 - Sector 3 time in ms
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x1C, true),
+
+			// 0x198 - Sector 4 time in ms
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x20, true),
+
+			// 0x198 - Sector 5 time in ms
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x24, true),
+
+			// 0x198 - Sector 6 time in ms
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x28, true),
+
+			// 0x198 - Sector 7 time in ms
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x2C, true)
+		};
+
+		// Get the current system time
+		tm currentTime = getCurrentTime();
+
+		// Write the time to the stream
+		taOfstream <<
+			"wmmt5dxp," << // Game Code (e.g. wmmt5, wmmt5dxp, etc.)
+			mktime(&currentTime) << "," << // Submitted time (local timezone)
+			customNameDxp << "," << // Profile Name (e.g. Scrubbs)
+			carNameDxp << "," << // Car Name (e.g. G U E S T)
+			std::to_string(carCode) << "," << // Car Code (e.g. 0x7F)
+			std::to_string(courseCode) << "," << // Course ID (e.g. 0x001)
+			sectors[0] << "," << // Final time (milliseconds)
+			sectors[1] << "," << // Sector 1 (milliseconds)
+			sectors[2] << "," << // Sector 2 (milliseconds)
+			sectors[3] << "," << // Sector 3 (milliseconds)
+			sectors[4] << "," << // Sector 4 (milliseconds)
+			sectors[5] << "," << // Sector 5 (milliseconds)
+			sectors[6] << "," << // Sector 6 (milliseconds)
+			sectors[7] << std::endl; // Sector 7 (milliseconds)
+			
+
+		// Success status
+		status = 0;
+	}
+
+#ifdef _DEBUG
+	status ? writeLog("saveTimeAttackRecord failed.") : writeLog("saveTimeAttackRecord success.");
+#endif
+
+	// Return status code
+	return status;
+}
+
+// watchTmeAttack(LPVOID): DWORD WINAPI
+// Watches the time attack region to see
+// if a time has been written to memory. 
+// If a time is detected, it is saved to
+// the times.csv file.
+static DWORD WINAPI watchTimeAttack(LPVOID)
+{
+#ifdef _DEBUG
+	writeLog("Call to watchTimeAttack...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
+
+	// Story save data offset + Time Attack offset + Final Time offset
+	uintptr_t finalTimePtr = *(uintptr_t*)(savePtr + STORY_OFFSET) + 0x180 + 0x08;
+
+	// Get the final time
+	uint32_t finaltime;
+
+	// Records if the time has 
+	// already been saved or not
+	bool saved = false;
 
 	// Infinite loop
 	while (true)
 	{
-		// Wait 50ms
-		Sleep(50);
+		// Get the current integer value at the final time offset
+		finaltime = injector::ReadMemory<uint32_t>(finalTimePtr, true);
 
-		// Write the custom name to the car name in the name plate
-		memcpy((void*)(carSaveBase + 0xF0), customAuraDxp, 0x2);
+		// If the final time is set
+		if (finaltime != 2147483647)
+		{
+			// If the time has
+			// not been saved yet
+			if (!saved)
+			{
+				// Call the save function
+				saveTimeAttackRecord("timeattack.csv");
+
+				// Set saved to true
+				saved = true;
+			}
+		}
+		else // Final time is not set
+		{
+			// Set saved to false
+			saved = false;
+		}
+
+		// Sleep 50ms
+		Sleep(50);
 	}
 
-	writeLog("spamCustomAura done.");
-
-}
+#ifdef _DEBUG
+	writeLog("watchTimeAttack done.");
 #endif
-*/
-
-// Custom name (i.e. Scrubbs)
-char customNameDxp[256];
+}
 
 static DWORD WINAPI spamCustomName(LPVOID)
 {
@@ -994,6 +1182,8 @@ static DWORD WINAPI spamCustomName(LPVOID)
 	writeLog("spamCustomName done.");
 #endif
 }
+
+#pragma region car_load_save
 
 // saveCustomName(filename: char*): Int
 // Given a filename, saves the default custom name
@@ -1226,6 +1416,9 @@ static int loadCustomName(char* filename)
 		}
 	}
 
+	// Copy the name of the car into the car name variable
+	memcpy(carNameDxp,(void*)namePtr, NAME_LENGTH);
+
 #ifdef _DEBUG
 	switch (status)
 	{
@@ -1248,6 +1441,309 @@ static int loadCustomName(char* filename)
 	return status;
 }
 
+// saveCustomGTWing(filename: char*): Int
+// Given a filename, saves the default custom 
+// GT wing data to the file. Returns a status code 
+// of 0 if successful, and a code of 1 if failed.
+static int saveCustomGTWing(char* filename)
+{
+#ifdef _DEBUG
+	writeLog("Call to saveCustomGTWing...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// _DEBUG: Address where the player name (might be) saved
+	uintptr_t gtWingPtr = *(uintptr_t*)(carSaveBase + 0x50);
+
+	// Dump the default name to the file
+
+	// Success status for the custom sticker dump
+	bool status = dumpMemory(filename, gtWingPtr, GTWING_DATA_SIZE);
+
+#ifdef _DEBUG
+	status ? writeLog("saveCustomGTWing failed.") : writeLog("saveCustomGTWing success.");
+#endif
+
+	// Return status code
+	return status;
+}
+
+
+// loadCustomGTWing(filename: char*): Int
+// Given a filename, loads the custom GT wing
+// attribute from the file. If the file does not
+// exist, it is created using saveCustomGTWing. 
+// Returns true on a successful execution.
+static int loadCustomGTWing(char* filename)
+{
+#ifdef _DEBUG
+	writeLog("Call to loadCustomGTWing...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// _DEBUG: Address where the player name (might be) saved
+	uintptr_t gtWingPtr = *(uintptr_t*)(carSaveBase + 0x50);
+
+	// Success status (default: Failed to open file)
+	int status = 1;
+
+	// Custom title file does not exist
+	if (!(FileExists(filename)))
+	{
+		// Create the default file
+		saveCustomGTWing(filename);
+	}
+	else // Custom name file does not exist
+	{
+		// Open the file with the file name
+		FILE* file = fopen(filename, "rb");
+
+		// File is opened successfully
+		if (file)
+		{
+			// Get the length of the file
+			fseek(file, 0, SEEK_END);
+			int fsize = ftell(file);
+
+			// If the file has the right size
+			if (fsize == GTWING_DATA_SIZE)
+			{
+				// Reset to start of the file 
+				// and read it into the car 
+				// data variable
+				fseek(file, 0, SEEK_SET);
+
+				// Array for storing gt wing data temporarily
+				unsigned char gtWingData[GTWING_DATA_SIZE];
+
+				// Zero out the gt wing data storage
+				memset(gtWingData, 0x0, GTWING_DATA_SIZE);
+
+				// Copy the contents from the file into the storage
+				fread(gtWingData, 0x1, GTWING_DATA_SIZE, file);
+
+				dumpMemory("GTWING_PRE.bin", gtWingPtr, GTWING_DATA_SIZE);
+
+				// Memcpys for the gt wing data will go here :)
+				memcpy((void*)(gtWingPtr + 0x10), (void*)(gtWingData + 0x10), 0x10); // Entire of row 2
+				memcpy((void*)(gtWingPtr + 0x20), (void*)(gtWingData + 0x20), 0x10); // Entire of row 3
+
+				dumpMemory("GTWING_POST.bin", gtWingPtr, GTWING_DATA_SIZE);
+
+				// Close the file
+				fclose(file);
+
+				// Success
+				status = 0;
+			}
+			else // Name file is the wrong size
+			{
+				// Incorrect file size
+				status = 2;
+			}
+		}
+	}
+
+#ifdef _DEBUG
+	switch (status)
+	{
+	case 0: // Success
+		writeLog("loadCustomGTWing success.");
+		break;
+	case 1: // No file
+		writeLog("loadCustomGTWing failed: No file. Default file created.");
+		break;
+	case 2: // File wrong size
+		writeLog("loadCustomGTWing failed: Wrong file size.");
+		break;
+	default: // Generic error
+		writeLog("loadCustomGTWing failed.");
+		break;
+	}
+#endif
+
+	// Return status code
+	return status;
+}
+
+// saveCustomGTWing(filename: char*): Int
+// Given a filename, saves the default custom 
+// GT wing data to the file. Returns a status code 
+// of 0 if successful, and a code of 1 if failed.
+static int saveCustomMiniSticker(char* filename)
+{
+#ifdef _DEBUG
+	writeLog("Call to saveCustomMiniSticker...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// _DEBUG: Address where the player name (might be) saved
+	uintptr_t miniStickerPtr = *(uintptr_t*)(carSaveBase + 0x68);
+
+	// Create the mini sticker buffer
+	uint8_t miniStickerData[MINI_STICKER_DATA_SIZE];
+
+	// Zero out the mini sticker buffer
+	memset(miniStickerData, 0x0, MINI_STICKER_DATA_SIZE);
+
+	// Loop over all of the mini stickers
+	for (int i = 0; i < 10; i++) 
+	{
+		// Get the offset to the current sticker
+		int offset = i * 0x8;
+
+		// Get the offset to the save address
+		int save_offset = i * 0x10;
+
+		// Get the pointer to the current sticker
+		uintptr_t currentStickerPtr = *(uintptr_t*)(miniStickerPtr + offset);
+
+		// Copy the the second row from the current mini sticker pointer to the 'i'th row in the buffer
+		memcpy((void*)(miniStickerData + save_offset), (void*)(currentStickerPtr + 0x10), 0x10);
+	}
+
+	// Write 0xA0 -> 0xA4 from the mini sticker pointer to the save data
+	memcpy((void*)(miniStickerData + 0xA0), (void*)(miniStickerPtr + 0x50), 0x4);
+
+	// Success status for the custom sticker dump
+	bool status = writeDump(filename, miniStickerData, MINI_STICKER_DATA_SIZE);
+
+#ifdef _DEBUG
+	status ? writeLog("saveCustomMiniSticker failed.") : writeLog("saveCustomMiniSticker success.");
+#endif
+
+	// Return status code
+	return status;
+}
+
+// loadCustomGTWing(filename: char*): Int
+// Given a filename, loads the custom GT wing
+// attribute from the file. If the file does not
+// exist, it is created using saveCustomGTWing. 
+// Returns true on a successful execution.
+static int loadCustomMiniSticker(char* filename)
+{
+#ifdef _DEBUG
+	writeLog("Call to loadCustomMiniSticker...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBaseDxp + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// _DEBUG: Address where the player name (might be) saved
+	uintptr_t miniStickerPtr = *(uintptr_t*)(carSaveBase + 0x68);
+
+	// Success status (default: Failed to open file)
+	int status = 1;
+
+	// Custom title file does not exist
+	if (!(FileExists(filename)))
+	{
+		// Create the default file
+		saveCustomMiniSticker(filename);
+	}
+	else // Custom name file does not exist
+	{
+		// Open the file with the file name
+		FILE* file = fopen(filename, "rb");
+
+		// File is opened successfully
+		if (file)
+		{
+			// Get the length of the file
+			fseek(file, 0, SEEK_END);
+			int fsize = ftell(file);
+
+			// If the file has the right size
+			if (fsize == MINI_STICKER_DATA_SIZE)
+			{
+				// Reset to start of the file 
+				// and read it into the car 
+				// data variable
+				fseek(file, 0, SEEK_SET);
+
+				// Array for storing gt wing data temporarily
+				unsigned char miniStickerData[MINI_STICKER_DATA_SIZE];
+
+				// Zero out the gt wing data storage
+				memset(miniStickerData, 0x0, MINI_STICKER_DATA_SIZE);
+
+				// Copy the contents from the file into the storage
+				fread(miniStickerData, 0x1, MINI_STICKER_DATA_SIZE, file);
+
+				// Loop over all of the mini stickers
+				for (int i = 0; i < 10; i++)
+				{
+					// Get the offset to the current sticker
+					int offset = i * 0x8;
+
+					// Get the offset to the save address
+					int save_offset = i * 0x10;
+
+					// Get the pointer to the current sticker
+					uintptr_t currentStickerPtr = *(uintptr_t*)(miniStickerPtr + offset);
+
+					// Copy the 'i'th row in the buffer to the second row from the current mini sticker pointer
+					memcpy((void*)(currentStickerPtr + 0x10), (void*)(miniStickerData + save_offset), 0x10);
+				}
+
+				// Write 0xA0 -> 0xA4 from the save data to the mini sticker pointer
+				memcpy((void*)(miniStickerPtr + 0x50), (void*)(miniStickerData + 0xA0), 0x4);
+
+				// Close the file
+				fclose(file);
+
+				// Success
+				status = 0;
+			}
+			else // Name file is the wrong size
+			{
+				// Incorrect file size
+				status = 2;
+			}
+		}
+	}
+
+#ifdef _DEBUG
+	switch (status)
+	{
+	case 0: // Success
+		writeLog("loadCustomMiniSticker success.");
+		break;
+	case 1: // No file
+		writeLog("loadCustomMiniSticker failed: No file. Default file created.");
+		break;
+	case 2: // File wrong size
+		writeLog("loadCustomMiniSticker failed: Wrong file size.");
+		break;
+	default: // Generic error
+		writeLog("loadCustomMiniSticker failed.");
+		break;
+	}
+#endif
+
+	// Return status code
+	return status;
+}
+
 // saveCustomTitle(filepath: char*): Int
 // Saves the custom title value to the current car's title, 
 // otherwise creates a default title.
@@ -1262,7 +1758,7 @@ static int saveCustomTitle(char* filename)
 
 	// Status code (Default fail)
 	bool status = 1;
-	
+
 	// Create the title array
 	char title[TITLE_LENGTH];
 
@@ -1389,8 +1885,6 @@ static int loadCustomTitle(char* filename)
 	// Return status code
 	return status;
 }
-
-#ifdef _DEBUG
 
 // saveCustomRegion(filepath: char*): Int
 // Saves the custom title value to the current car's title, 
@@ -1539,8 +2033,6 @@ static int loadCustomRegion(char* filename)
 	return status;
 }
 
-#endif
-
 // verifyCarData(void): Int
 // Compares the data in the loaded car data to the 
 // data which is to be saved, to ensure that the new data
@@ -1563,18 +2055,18 @@ static int verifyCarData()
 	// be loaded and their purpose for car data.
 	uint8_t offsets[] = {
 
-		0x08, 0x0C, 0x10, 0x14, 
-		0x18, 0x1C, 0x24, 0x28, 
-		0x2C, 0x30, 0x34, 0x3C,	
-		0x40, 0x44, 0x48, 0x4C, 
-		0x54, 0x58, 0x5C, 0x60, 
-		0x64, 0x6C, 0x70, 0x78, 
-		0x7C, 0x80, 0x84, 0x88, 
-		0x8C, 0x90, 0x94, 0x98, 
-		0x9C, 0xA0, 0xA4, 0xA8, 
-		0xAC, 0xB4, 0xB8, 0xBC, 
-		0xC0, 0xC4, 0xD0, 0xD4, 
-		0xD8, 0xDC, 0xE0, 0xE4, 
+		0x08, 0x0C, 0x10, 0x14,
+		0x18, 0x1C, 0x24, 0x28,
+		0x2C, 0x30, 0x34, 0x3C,
+		0x40, 0x44, 0x48, 0x4C,
+		0x54, 0x58, 0x5C, 0x60,
+		0x64, 0x6C, 0x70, 0x78,
+		0x7C, 0x80, 0x84, 0x88,
+		0x8C, 0x90, 0x94, 0x98,
+		0x9C, 0xA0, 0xA4, 0xA8,
+		0xAC, 0xB4, 0xB8, 0xBC,
+		0xC0, 0xC4, 0xD0, 0xD4,
+		0xD8, 0xDC, 0xE0, 0xE4,
 		0xEC, 0xF0, 0xF4, 0xFC
 	};
 
@@ -1759,7 +2251,7 @@ static int loadCarFile(char* filename)
 // Given a filepath, attempts to load a 
 // car file (either custom.car or specific
 // car file) from that folder.
-static int loadCarData(char * filepath)
+static int loadCarData(char* filepath)
 {
 #ifdef _DEBUG
 	writeLog("Call to loadCarData...");
@@ -1825,6 +2317,13 @@ static int loadCarData(char * filepath)
 		// Get the path to the specific car title file
 		sprintf(stickerFileNameDxp, "%s\\%08X.sticker", path, selectedCarCodeDxp);
 
+		// Get the path to the specific car title file
+		sprintf(gtWingFileNameDxp, "%s\\%08X.gtwing", path, selectedCarCodeDxp);
+
+		// Get the path to the specific car title file
+		sprintf(miniStickFileNameDxp, "%s\\%08X.ministick", path, selectedCarCodeDxp);
+
+
 		// If the specific car file exists
 		if (FileExists(carFileNameDxp))
 		{
@@ -1845,6 +2344,19 @@ static int loadCarData(char * filepath)
 	// Load the custom sticker file
 	loadCustomSticker(stickerFileNameDxp);
 
+	// Load the custom gt wing file
+	loadCustomGTWing(gtWingFileNameDxp);
+
+	// Load the custom mini sticker file
+	loadCustomMiniSticker(miniStickFileNameDxp);
+
+	// Sets if the time attack region should be monitored
+	if (ToBool(config["General"]["SaveTimeAttack"]))
+	{
+		// Create a thread monitoring the time attack memory
+		CreateThread(0, 0, watchTimeAttack, 0, 0, 0);;
+	}
+
 	// If the force full tune switch is set
 	if (ToBool(config["Tune"]["Force Full Tune"]))
 	{
@@ -1859,6 +2371,8 @@ static int loadCarData(char * filepath)
 	// Return status code
 	return status;
 }
+
+#pragma endregion car_load_save
 
 static int saveSettingsData(char* filepath)
 {
@@ -1961,7 +2475,7 @@ static int loadSettingsData(char* filepath)
 			// I cbf fixing this area right now
 			// memcpy((void*)(settingsPtr + 0x14), (void*)(settingsData + 0x14), 0x05); // Second row (0x14 -> 0x18)
 			// memcpy((void*)(settingsPtr + 0x1A), (void*)(settingsData + 0x1A), 0x06); // Second row (0x1A -> 0x2F)
-			
+
 			memcpy((void*)(settingsPtr + 0x20), (void*)(settingsData + 0x20), 0x10); // Third row (entire row)
 			memcpy((void*)(settingsPtr + 0x30), (void*)(settingsData + 0x30), 0x10); // Fourth row (entire row)
 
@@ -2034,7 +2548,7 @@ static int loadSettingsData(char* filepath)
 			memset((void*)(settingsPtr + 0x20), 0x15, 0x1);
 		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Gold Meter") == 0)
 			memset((void*)(settingsPtr + 0x20), 0x16, 0x1);
-		
+
 		/* Undiscovered offsets
 		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Steampunk Meter (Gold)") == 0)
 			memset((void*)(settingsPtr + 0x20), 0x17, 0x1);
@@ -2257,7 +2771,7 @@ static int loadStoryData(char* filepath)
 			memcpy((void*)(saveStoryBase + 0x100), storyDataDxp + 0x100, 0x8); // Win Streak (0x104)
 			memcpy((void*)(saveStoryBase + 0x108), storyDataDxp + 0x108, 0x8); // ??
 			memcpy((void*)(saveStoryBase + 0x110), storyDataDxp + 0x110, 0x8); // Locked Chapters (0x110) (Bitmask)
-			
+
 			// (Mostly) discovered time attack data
 			// This is where the time attack data gets stored, BEFORE it gets cleared.
 			// Unfortunately, we can't do much with this currently without finding out
@@ -2385,7 +2899,7 @@ static int loadMileData(char* filepath)
 
 	// Mile data dump memory block
 	uint8_t mileData[MILE_DATA_SIZE];
-	
+
 	// Zero out the mile data memory
 	memset(mileData, 0x0, MILE_DATA_SIZE);
 
@@ -2546,7 +3060,7 @@ static int saveVersusData(char* filepath)
 	bool status = dumpMemory(path, versusPtr, VERSUS_DATA_SIZE);
 
 #ifdef _DEBUG
-status ? writeLog("saveVersusData failed.") : writeLog("saveVersusData success.");
+	status ? writeLog("saveVersusData failed.") : writeLog("saveVersusData success.");
 #endif
 
 	// Return status code
@@ -2608,17 +3122,17 @@ static int loadVersusData(char* filepath)
 			memcpy((void*)(versusPtr + 0x18), versusData + 0x18, 0x8); // ???
 			memcpy((void*)(versusPtr + 0x20), versusData + 0x20, 0x8); // Player Count (0x24)
 			memcpy((void*)(versusPtr + 0x28), versusData + 0x28, 0x8); // ???
-			
+
 			memcpy((void*)(versusPtr + 0x30), versusData + 0x30, 0x8); // ???
 			memcpy((void*)(versusPtr + 0x38), versusData + 0x38, 0x8); // Unknown 0x1 (0x8)
 			memcpy((void*)(versusPtr + 0x40), versusData + 0x40, 0x8); // Win Streak (??)
 			memcpy((void*)(versusPtr + 0x48), versusData + 0x48, 0x8); // Stars (0x48), ??? (0x4C)
-			
+
 			memcpy((void*)(versusPtr + 0x50), versusData + 0x50, 0x8); // Gold Medals (0x54) ??
 			memcpy((void*)(versusPtr + 0x58), versusData + 0x58, 0x8); // Silver Medals (0x58), Bronze Medals (0x5C) ??
 			memcpy((void*)(versusPtr + 0x60), versusData + 0x60, 0x8); // Black Medals (0x60)
 			memcpy((void*)(versusPtr + 0x68), versusData + 0x68, 0x8); // ??
-			
+
 			memcpy((void*)(versusPtr + 0x70), versusData + 0x70, 0x8); // ??
 			memcpy((void*)(versusPtr + 0x78), versusData + 0x78, 0x8); // ??
 			memcpy((void*)(versusPtr + 0x80), versusData + 0x80, 0x8); // ??
@@ -2686,11 +3200,8 @@ static int loadGameData()
 	// Seperate save file / cars per user profile
 	if (ToBool(config["Save"]["Save Per Custom Name"]))
 	{
-		// Get the profile name from the 
-		std::string name = config["General"]["CustomName"];
-
 		// Add the c string version of the profile name to the path
-		sprintf(path, "%s\\%s", path, name.c_str());
+		sprintf(path, "%s\\%s", path, customNameDxp);
 	}
 
 	// Seperate miles / story per car
@@ -2743,7 +3254,7 @@ static int saveGameData()
 #ifdef _DEBUG
 	writeLog("Call to saveGameData...");
 #endif
-	
+
 	// Success/fail code (default: fail)
 	int status = 1;
 
@@ -2763,11 +3274,8 @@ static int saveGameData()
 		// Seperate save file / cars per user profile
 		if (ToBool(config["Save"]["Save Per Custom Name"]))
 		{
-			// Get the profile name from the 
-			std::string name = config["General"]["CustomName"];
-
 			// Add the c string version of the profile name to the path
-			sprintf(path, "%s\\%s", path, name.c_str());
+			sprintf(path, "%s\\%s", path, customNameDxp);
 		}
 
 		// Seperate miles / story per car
@@ -2786,7 +3294,7 @@ static int saveGameData()
 				// Add the custom folder to the save path
 				sprintf(path, "%s\\%08X", path, selectedCarCodeDxp);
 			}
-			}
+		}
 
 		// Ensure the directory exists
 		std::filesystem::create_directories(path);
@@ -2864,7 +3372,7 @@ void generateDongleData(bool isTerminal)
 	hasp_buffer[0x2E] = 0x40;
 	hasp_buffer[0x2F] = 0x87;
 
-	if(isTerminal)
+	if (isTerminal)
 	{
 		memcpy(hasp_buffer + 0xD00, "278311042069", 12); //272211990002
 		hasp_buffer[0xD3E] = 0x6B;
@@ -2906,7 +3414,7 @@ static DWORD WINAPI spamMulticast(LPVOID)
 	bindAddr.sin_addr.s_addr = inet_addr(ipaddrdxplus);
 	bindAddr.sin_port = htons(50765);
 	bind(sock, (sockaddr*)&bindAddr, sizeof(bindAddr));
-	
+
 
 	ip_mreq mreq;
 	mreq.imr_multiaddr.s_addr = inet_addr("225.0.0.1");
@@ -2931,7 +3439,7 @@ static DWORD WINAPI spamMulticast(LPVOID)
 		sizeof(dxpterminalPackage5_Free),
 		sizeof(dxpterminalPackage6_Free),
 	};
-	
+
 	const uint8_t* byteSequences_Event2P[] = {
 		dxpterminalPackage1_Event2P,
 		dxpterminalPackage2_Event2P,
@@ -2985,18 +3493,18 @@ static DWORD WINAPI spamMulticast(LPVOID)
 		sizeof(dxpterminalPackage5_Coin),
 		sizeof(dxpterminalPackage6_Coin),
 	};
-	
+
 	sockaddr_in toAddr = { 0 };
 	toAddr.sin_family = AF_INET;
 	toAddr.sin_addr.s_addr = inet_addr("225.0.0.1");
 	toAddr.sin_port = htons(50765);
-	
-	
+
+
 	isFreePlay = ToBool(config["General"]["FreePlay"]);
 	isEventMode2P = ToBool(config["TerminalEmuConfig"]["2P Event Mode"]);
 	isEventMode4P = ToBool(config["TerminalEmuConfig"]["4P Event Mode"]);
-	
-	
+
+
 	if (isFreePlay)
 	{
 		if (isEventMode2P) {
@@ -3021,7 +3529,7 @@ static DWORD WINAPI spamMulticast(LPVOID)
 			}
 		}
 	}
-	
+
 	while (true) for (int i = 0; i < _countof(byteSequences_Coin); i++)
 	{
 		sendto(sock, (const char*)byteSequences_Coin[i], byteSizes_Coin[i], 0, (sockaddr*)&toAddr, sizeof(toAddr));
@@ -3038,179 +3546,176 @@ static DWORD WINAPI spamMulticast(LPVOID)
 // maximum tune 5, including the starting 
 // of required subprocesses.
 static InitFunction Wmmt5Func([]()
-{
+	{
 #ifdef _DEBUG
-	writeLog("Game: Wangan Midnight Maximum Tune 5DX+");
-	writeLog("Call to init function ...");
+		writeLog("Game: Wangan Midnight Maximum Tune 5DX+");
+		writeLog("Call to init function ...");
 #endif
 
-	// Records if terminal mode is enabled
-	bool isTerminal = false;
+		// Records if terminal mode is enabled
+		bool isTerminal = false;
 
-	// If terminal mode is set in the general settings
-	if (ToBool(config["General"]["TerminalMode"]))
-	{
-		// Terminal mode is set
-		isTerminal = true;
-	}
-	
-	// Get the network adapter ip address from the general settings
-	std::string networkip = config["General"]["NetworkAdapterIP"];
-
-	// If the ip address is not blank
-	if (!networkip.empty())
-	{
-		// Overwrite the default ip address
-		ipaddrdxplus = networkip.c_str();
-	}
-
-	hookPort = "COM3";
-	imageBaseDxp = (uintptr_t)GetModuleHandleA(0);
-
-	MH_Initialize();
-
-	// Hook dongle funcs
-	MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_write", hook_hasp_write, NULL);
-	MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_read", hook_hasp_read, NULL);
-	MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_get_size", hook_hasp_get_size, NULL);
-	MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_decrypt", hook_hasp_decrypt, NULL);
-	MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_encrypt", hook_hasp_encrypt, NULL);
-	MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_logout", hook_hasp_logout, NULL);
-	MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_login", hook_hasp_login, NULL);
-
-	generateDongleData(isTerminal);
-
-	// Prevents game from setting time, thanks pockywitch!
-	MH_CreateHookApi(L"KERNEL32", "SetSystemTime", Hook_SetSystemTime, reinterpret_cast<LPVOID*>(&pSetSystemTime));
-
-	// Patch some check TEMP DISABLE AS WELL OVER HERE
-	// 0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 E4 EB 03 41 B4 01
-	// FOUND ON 21, 10
-	// NOT WORKING 1
-	// 0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 ?? EB
-	// FOUND ON 1
-	//injector::WriteMemory<uint8_t>(imageBase + 0x6286EC, 0, true); 
-	injector::WriteMemory<uint8_t>(hook::get_pattern("85 C9 0F 94 C0 84 C0 0F 94 C0 84 C0 75 ? 40 32 F6 EB ?", 0x15), 0, true); //patches out dongle error2 (doomer)
-
-	// Patch some jnz
-	// 83 C0 FD 83 F8 01 0F 87 B4 00 00 00 83 BF D0 06 00 00 3C 73 29 48 8D 8D 60 06 00 00
-	// FOUND ON 21, 10
-	// NOT FOUND: 1
-	// 83 C0 FD 83 F8 01 0F 87 B4 00 00 00
-	// FOUND ON 1
-	//injector::MakeNOP(imageBase + 0x628AE0, 6);
-	//THIS injector::MakeNOP(hook::get_pattern("83 C0 FD 83 F8 01 0F 87 B4 00 00 00", 6), 6);
-	injector::MakeNOP(hook::get_pattern("83 C0 FD 83 F8 01 76 ? 49 8D ? ? ? ? 00 00"), 6);
-
-	// Patch some shit
-	// 83 FA 04 0F 8C 1E 01 00 00 4C 89 44 24 18 4C 89 4C 24 20
-	// FOUND ON 21, 10, 1
-	// NOT FOUND:
-	//injector::WriteMemory<uint8_t>(imageBase + 0x7B9882, 0, true);
-	//THIS injector::WriteMemory<uint8_t>(hook::get_pattern("83 FA 04 0F 8C 1E 01 00 00 4C 89 44 24 18 4C 89 4C 24 20", 2), 0, true);
-		
-	// Skip weird camera init that stucks entire pc on certain brands. TESTED ONLY ON 05!!!!
-	if (ToBool(config["General"]["WhiteScreenFix"]))
-	{
-		injector::WriteMemory<DWORD>(hook::get_pattern("48 8B C4 55 57 41 54 41 55 41 56 48 8D 68 A1 48 81 EC 90 00 00 00 48 C7 45 D7 FE FF FF FF 48 89 58 08 48 89 70 18 45 33 F6 4C 89 75 DF 33 C0 48 89 45 E7", 0), 0x90C3C032, true);
-	}
-
-	// Patch some call
-	// 45 33 C0 BA 65 09 00 00 48 8D 4D B0 E8 ?? ?? ?? ?? 48 8B 08
-	// FOUND ON 21, 10, 1
-
-	{
-		// 199AE18 TIME OFFSET RVA temp disable ALL JNZ PATCH
-
-		auto location = hook::get_pattern<char>("41 3B C7 74 0E 48 8D 8F B8 00 00 00 BA F6 01 00 00 EB 6E 48 8D 8F A0 00 00 00");
-		
-		// Patch some jnz
-		// 41 3B C7 74 0E 48 8D 8F B8 00 00 00 BA F6 01 00 00 EB 6E 48 8D 8F A0 00 00 00
-		// FOUND ON 21, 10, 1
-		injector::WriteMemory<uint8_t>(location + 3, 0xEB, true); //patches content router (doomer)
-
-		// Skip some jnz
-		injector::MakeNOP(location + 0x22, 2); //patches ip addr error again (doomer)
-
-		// Skip some jnz
-		injector::MakeNOP(location + 0x33, 2); //patches ip aaddr error(doomer)
-	}
-
-	// Terminal mode is off
-	if (!isTerminal)
-	{
-		// Disregard terminal scanner stuff.
-		// 48 8B 18 48 3B D8 0F 84 88 00 00 00 39 7B 1C 74 60 80 7B 31 00 75 4F 48 8B 43 10 80 78 31 00
-		// FOUND ON 21, 10, 1
-		//injector::MakeNOP(imageBase + 0x91E1AE, 6);
-		//injector::MakeNOP(imageBase + 0x91E1B7, 2);
-		//injector::MakeNOP(imageBase + 0x91E1BD, 2);
-
-		/*
-		auto location = hook::get_pattern<char>("48 8B 18 48 3B D8 0F 84 8B 00 00 00 0F 1F 80 00 00 00 00 39 73 1C 74 5C 80 7B 31 00");
-		// injector::MakeNOP(location + 6, 6); // 6
-		injector::MakeNOP(location + 0xF, 2); // 0xF
-		// injector::MakeNOP(location + 0x15, 2); // 0x15
-		*/
-
-		injector::MakeNOP(imageBaseDxp + 0x9F2BB3, 2);
-
-		// If terminal emulator is enabled
-		if (ToBool(config["General"]["TerminalEmulator"]))
+		// If terminal mode is set in the general settings
+		if (ToBool(config["General"]["TerminalMode"]))
 		{
-			// Start the multicast spam thread
-			CreateThread(0, 0, spamMulticast, 0, 0, 0);
+			// Terminal mode is set
+			isTerminal = true;
 		}
-	}
-	/*
-	else
-	{
-		// Patch some func to 1
-		// 
+
+		// Get the network adapter ip address from the general settings
+		std::string networkip = config["General"]["NetworkAdapterIP"];
+
+		// If the ip address is not blank
+		if (!networkip.empty())
+		{
+			// Overwrite the default ip address
+			ipaddrdxplus = networkip.c_str();
+		}
+
+		hookPort = "COM3";
+		imageBaseDxp = (uintptr_t)GetModuleHandleA(0);
+
+		MH_Initialize();
+
+		// Hook dongle funcs
+		MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_write", hook_hasp_write, NULL);
+		MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_read", hook_hasp_read, NULL);
+		MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_get_size", hook_hasp_get_size, NULL);
+		MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_decrypt", hook_hasp_decrypt, NULL);
+		MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_encrypt", hook_hasp_encrypt, NULL);
+		MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_logout", hook_hasp_logout, NULL);
+		MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_login", hook_hasp_login, NULL);
+
+		generateDongleData(isTerminal);
+
+		// Prevents game from setting time, thanks pockywitch!
+		MH_CreateHookApi(L"KERNEL32", "SetSystemTime", Hook_SetSystemTime, reinterpret_cast<LPVOID*>(&pSetSystemTime));
+
+		// Patch some check TEMP DISABLE AS WELL OVER HERE
+		// 0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 E4 EB 03 41 B4 01
+		// FOUND ON 21, 10
+		// NOT WORKING 1
+		// 0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 ?? EB
+		// FOUND ON 1
+		//injector::WriteMemory<uint8_t>(imageBase + 0x6286EC, 0, true); 
+		injector::WriteMemory<uint8_t>(hook::get_pattern("85 C9 0F 94 C0 84 C0 0F 94 C0 84 C0 75 ? 40 32 F6 EB ?", 0x15), 0, true); //patches out dongle error2 (doomer)
+
+		// Patch some jnz
+		// 83 C0 FD 83 F8 01 0F 87 B4 00 00 00 83 BF D0 06 00 00 3C 73 29 48 8D 8D 60 06 00 00
+		// FOUND ON 21, 10
+		// NOT FOUND: 1
+		// 83 C0 FD 83 F8 01 0F 87 B4 00 00 00
+		// FOUND ON 1
+		//injector::MakeNOP(imageBase + 0x628AE0, 6);
+		//THIS injector::MakeNOP(hook::get_pattern("83 C0 FD 83 F8 01 0F 87 B4 00 00 00", 6), 6);
+		injector::MakeNOP(hook::get_pattern("83 C0 FD 83 F8 01 76 ? 49 8D ? ? ? ? 00 00"), 6);
+
+		// Patch some shit
+		// 83 FA 04 0F 8C 1E 01 00 00 4C 89 44 24 18 4C 89 4C 24 20
 		// FOUND ON 21, 10, 1
 		// NOT FOUND:
-		//safeJMP(imageBase + 0x7BE440, returnTrue);
-		//safeJMP(hook::get_pattern("0F B6 41 05 2C 30 3C 09 77 04 0F BE C0 C3 83 C8 FF C3"), returnTrue);
-		//safeJMP(imageBase + 0x89D420, returnTrue);
+		//injector::WriteMemory<uint8_t>(imageBase + 0x7B9882, 0, true);
+		//THIS injector::WriteMemory<uint8_t>(hook::get_pattern("83 FA 04 0F 8C 1E 01 00 00 4C 89 44 24 18 4C 89 4C 24 20", 2), 0, true);
 
-		// Patch some func to 1
-		// 40 53 48 83 EC 20 48 83 39 00 48 8B D9 75 28 48 8D ?? ?? ?? ?? 00 48 8D ?? ?? ?? ?? 00 41 B8 ?? ?? 00 00 FF 15 ?? ?? ?? ?? 4C 8B 1B 41 0F B6 43 78
-		// FOUND ON 21, 10, 1
-		//safeJMP(imageBase + 0x7CF8D0, returnTrue); 
-		//safeJMP(hook::get_pattern("40 53 48 83 EC 20 48 83 39 00 48 8B D9 75 11 48 8B 0D C2"), returnTrue);
-		//safeJMP(imageBase + 0x8B5190, returnTrue); 
-	}
-	*/
-
-	auto chars = { 'F', 'G' };
-
-	for (auto cha : chars)
-	{
-		auto patterns = hook::pattern(va("%02X 3A 2F", cha));
-
-		if (patterns.size() > 0)
+		// Skip weird camera init that stucks entire pc on certain brands. TESTED ONLY ON 05!!!!
+		if (ToBool(config["General"]["WhiteScreenFix"]))
 		{
-			for (int i = 0; i < patterns.size(); i++)
+			injector::WriteMemory<DWORD>(hook::get_pattern("48 8B C4 55 57 41 54 41 55 41 56 48 8D 68 A1 48 81 EC 90 00 00 00 48 C7 45 D7 FE FF FF FF 48 89 58 08 48 89 70 18 45 33 F6 4C 89 75 DF 33 C0 48 89 45 E7", 0), 0x90C3C032, true);
+		}
+
+		// Patch some call
+		// 45 33 C0 BA 65 09 00 00 48 8D 4D B0 E8 ?? ?? ?? ?? 48 8B 08
+		// FOUND ON 21, 10, 1
+
+		{
+			// 199AE18 TIME OFFSET RVA temp disable ALL JNZ PATCH
+
+			auto location = hook::get_pattern<char>("41 3B C7 74 0E 48 8D 8F B8 00 00 00 BA F6 01 00 00 EB 6E 48 8D 8F A0 00 00 00");
+
+			// Patch some jnz
+			// 41 3B C7 74 0E 48 8D 8F B8 00 00 00 BA F6 01 00 00 EB 6E 48 8D 8F A0 00 00 00
+			// FOUND ON 21, 10, 1
+			injector::WriteMemory<uint8_t>(location + 3, 0xEB, true); //patches content router (doomer)
+
+			// Skip some jnz
+			injector::MakeNOP(location + 0x22, 2); //patches ip addr error again (doomer)
+
+			// Skip some jnz
+			injector::MakeNOP(location + 0x33, 2); //patches ip aaddr error(doomer)
+		}
+
+		// Terminal mode is off
+		if (!isTerminal)
+		{
+			// Disregard terminal scanner stuff.
+			// 48 8B 18 48 3B D8 0F 84 88 00 00 00 39 7B 1C 74 60 80 7B 31 00 75 4F 48 8B 43 10 80 78 31 00
+			// FOUND ON 21, 10, 1
+			//injector::MakeNOP(imageBase + 0x91E1AE, 6);
+			//injector::MakeNOP(imageBase + 0x91E1B7, 2);
+			//injector::MakeNOP(imageBase + 0x91E1BD, 2);
+
+			/*
+			auto location = hook::get_pattern<char>("48 8B 18 48 3B D8 0F 84 8B 00 00 00 0F 1F 80 00 00 00 00 39 73 1C 74 5C 80 7B 31 00");
+			// injector::MakeNOP(location + 6, 6); // 6
+			injector::MakeNOP(location + 0xF, 2); // 0xF
+			// injector::MakeNOP(location + 0x15, 2); // 0x15
+			*/
+
+			injector::MakeNOP(imageBaseDxp + 0x9F2BB3, 2);
+
+			// If terminal emulator is enabled
+			if (ToBool(config["General"]["TerminalEmulator"]))
 			{
-				char* text = patterns.get(i).get<char>(0);
-				std::string text_str(text);
-
-				std::string to_replace = va("%c:/", cha);
-				std::string replace_with = va("./%c", cha);
-
-				std::string replaced = text_str.replace(0, to_replace.length(), replace_with);
-
-				injector::WriteMemoryRaw(text, (char*)replaced.c_str(), replaced.length() + 1, true);
+				// Start the multicast spam thread
+				CreateThread(0, 0, spamMulticast, 0, 0, 0);
 			}
 		}
-	}
+		/*
+		else
+		{
+			// Patch some func to 1
+			//
+			// FOUND ON 21, 10, 1
+			// NOT FOUND:
+			//safeJMP(imageBase + 0x7BE440, returnTrue);
+			//safeJMP(hook::get_pattern("0F B6 41 05 2C 30 3C 09 77 04 0F BE C0 C3 83 C8 FF C3"), returnTrue);
+			//safeJMP(imageBase + 0x89D420, returnTrue);
 
-	// Get the custom name specified in the  config file
-	std::string customName = config["General"]["CustomName"];
+			// Patch some func to 1
+			// 40 53 48 83 EC 20 48 83 39 00 48 8B D9 75 28 48 8D ?? ?? ?? ?? 00 48 8D ?? ?? ?? ?? 00 41 B8 ?? ?? 00 00 FF 15 ?? ?? ?? ?? 4C 8B 1B 41 0F B6 43 78
+			// FOUND ON 21, 10, 1
+			//safeJMP(imageBase + 0x7CF8D0, returnTrue);
+			//safeJMP(hook::get_pattern("40 53 48 83 EC 20 48 83 39 00 48 8B D9 75 11 48 8B 0D C2"), returnTrue);
+			//safeJMP(imageBase + 0x8B5190, returnTrue);
+		}
+		*/
 
-	// Sets if the custom name should be spammed (over the nameplate)
-	if (ToBool(config["General"]["SpamCustomName"]))
-	{
+		auto chars = { 'F', 'G' };
+
+		for (auto cha : chars)
+		{
+			auto patterns = hook::pattern(va("%02X 3A 2F", cha));
+
+			if (patterns.size() > 0)
+			{
+				for (int i = 0; i < patterns.size(); i++)
+				{
+					char* text = patterns.get(i).get<char>(0);
+					std::string text_str(text);
+
+					std::string to_replace = va("%c:/", cha);
+					std::string replace_with = va("./%c", cha);
+
+					std::string replaced = text_str.replace(0, to_replace.length(), replace_with);
+
+					injector::WriteMemoryRaw(text, (char*)replaced.c_str(), replaced.length() + 1, true);
+				}
+			}
+		}
+
+		// Get the custom name specified in the  config file
+		std::string customName = config["General"]["CustomName"];
+		
 		// If a custom name is set
 		if (!customName.empty())
 		{
@@ -3220,42 +3725,45 @@ static InitFunction Wmmt5Func([]()
 			// Copy the custom name to the custom name block
 			strcpy(customNameDxp, customName.c_str());
 
-			// Create the spam custom name thread
-			CreateThread(0, 0, spamCustomName, 0, 0, 0);
+			// Sets if the custom name should be spammed (over the nameplate)
+			if (ToBool(config["General"]["SpamCustomName"]))
+			{
+				// Create the spam custom name thread
+				CreateThread(0, 0, spamCustomName, 0, 0, 0);
+			}
 		}
-	}
 
-	// Save story stuff (only 05)
-	{
-		// Enable all print
-		injector::MakeNOP(imageBaseDxp + 0x898BD3, 6);
+		// Save story stuff (only 05)
+		{
+			// Enable all print
+			injector::MakeNOP(imageBaseDxp + 0x898BD3, 6);
 
-		// Load car and story data at once
-		safeJMP(imageBaseDxp + 0x72AB90, loadGame);
+			// Load car and story data at once
+			safeJMP(imageBaseDxp + 0x72AB90, loadGame);
 
-		// Save car trigger
-		// injector::WriteMemory<uintptr_t>(imageBase + 0x376F80 + 2, (uintptr_t)saveGameData, true);
-		// safeJMP(imageBase + 0x376F76, saveGameData);
+			// Save car trigger
+			// injector::WriteMemory<uintptr_t>(imageBase + 0x376F80 + 2, (uintptr_t)saveGameData, true);
+			// safeJMP(imageBase + 0x376F76, saveGameData);
 
-		// Save car trigger
-		injector::MakeNOP(imageBaseDxp + 0x376F76, 0x12);
-		injector::WriteMemory<WORD>(imageBaseDxp + 0x376F76, 0xB848, true);
-		injector::WriteMemory<uintptr_t>(imageBaseDxp + 0x376F76 + 2, (uintptr_t)saveGameData, true);
-		injector::WriteMemory<DWORD>(imageBaseDxp + 0x376F80, 0x3348D0FF, true);
-		injector::WriteMemory<WORD>(imageBaseDxp + 0x376F80 + 4, 0x90C0, true);
+			// Save car trigger
+			injector::MakeNOP(imageBaseDxp + 0x376F76, 0x12);
+			injector::WriteMemory<WORD>(imageBaseDxp + 0x376F76, 0xB848, true);
+			injector::WriteMemory<uintptr_t>(imageBaseDxp + 0x376F76 + 2, (uintptr_t)saveGameData, true);
+			injector::WriteMemory<DWORD>(imageBaseDxp + 0x376F80, 0x3348D0FF, true);
+			injector::WriteMemory<WORD>(imageBaseDxp + 0x376F80 + 4, 0x90C0, true);
 
-		// Prevents startup saving
-		injector::WriteMemory<WORD>(imageBaseDxp + 0x6B909A, 0xB848, true);
-		injector::WriteMemory<uintptr_t>(imageBaseDxp + 0x6B909A + 2, (uintptr_t)SaveOk, true);
-		injector::WriteMemory<DWORD>(imageBaseDxp + 0x6B90A4, 0x9090D0FF, true);
-	}
+			// Prevents startup saving
+			injector::WriteMemory<WORD>(imageBaseDxp + 0x6B909A, 0xB848, true);
+			injector::WriteMemory<uintptr_t>(imageBaseDxp + 0x6B909A + 2, (uintptr_t)SaveOk, true);
+			injector::WriteMemory<DWORD>(imageBaseDxp + 0x6B90A4, 0x9090D0FF, true);
+		}
 
-	MH_EnableHook(MH_ALL_HOOKS);
+		MH_EnableHook(MH_ALL_HOOKS);
 
 #ifdef _DEBUG
-	writeLog("Init function done.");
+		writeLog("Init function done.");
 #endif
 
-}, GameID::WMMT5DXPlus);
+	}, GameID::WMMT5DXPlus);
 #endif
 #pragma optimize("", on)
