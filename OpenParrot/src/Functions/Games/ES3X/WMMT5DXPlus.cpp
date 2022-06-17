@@ -27,7 +27,7 @@
 // and debug functions will be included in
 // the compilation
 
-// #define _DEBUG
+#define _DEBUG
 
 #pragma region packets
 
@@ -492,9 +492,6 @@ char carPath[FILENAME_MAX];
 // Time attack csv path
 char taCsvPath[FILENAME_MAX];
 
-// Versus csv path
-char vsCsvPath[FILENAME_MAX];
-
 // Title string storage
 char customTitleDxp[TITLE_LENGTH];
 
@@ -511,7 +508,6 @@ static bool saveOk = false;
 
 // Sets if TA / VS monitor threads should run
 static bool watchTA = false;
-static bool watchVS = false;
 
 // Terminal emulator settings
 static bool isFreePlay;
@@ -941,7 +937,7 @@ static int saveTimeAttackRecord()
 		// 4. Car Name (e.g. G U E S T)
 		// 5. Car Title (e.g. Wangan Beginner)
 		// 6. Car Code (e.g. 0x7F = S2K)
-		// 7. Car Rank (e.g. 0x0 = N)
+		// 7. Car Rank (e.g. 0x1 = N)
 		// 8. Car Region (e.g. 0x0 = OCR)
 		// 9. Transmission (e.g. 0x0 = Auto)
 		// 5. Course ID (e.g. 0x1 = C1 Inbound)
@@ -1004,7 +1000,7 @@ static int saveTimeAttackRecord()
 			carNameDxp << "," << // Car Name (e.g. G U E S T)
 			customTitleDxp << "," << // Car Title (e.g. Wangan Beginner)
 			std::to_string(carCode) << "," << // Car Code (e.g. 0x7F)
-			std::to_string(carRank) << "," << // Car Rank (e.g. 0x0 = N)
+			std::to_string(carRank) << "," << // Car Rank (e.g. 0x1 = N)
 			std::to_string(carRegion) << "," << // Car Region (e.g. 0x0 = OCR)
 			std::to_string(transmission) << "," << // Transmission (e.g. 0x0 = Auto)
 			std::to_string(courseCode) << "," << // Course ID (e.g. 0x1 = C1 Inbound)
@@ -3424,16 +3420,6 @@ static int loadGameData()
 		watchTA = true;
 	}
 
-	// Generate path to the versus csv file
-	sprintf(vsCsvPath, "%s\\%s", profilePath, VS_CSV_FILENAME);
-
-	// If the versus csv file exists
-	if (FileExists(vsCsvPath))
-	{
-		// Watch for VS data changes
-		watchVS = true;
-	}
-
 	// Check if the versus file exists
 
 	// Sleep for 30 seconds (Thanks Chery!)
@@ -3443,7 +3429,7 @@ static int loadGameData()
 	loadVersusData();
 
 	// If at least one is set
-	if (watchTA || watchVS)
+	if (watchTA)
 	{
 		// Start the time attack / versus monitor thread
 		CreateThread(0, 0, watchTimeAttack, 0, 0, 0);
