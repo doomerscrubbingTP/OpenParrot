@@ -1,35 +1,38 @@
+#pragma region imports
+
 #include <StdInc.h>
 #include "Utility/InitFunction.h"
 #include "Functions/Global.h"
 #include <filesystem>
 #include <iostream>
+#include <iomanip>
 #include <cstdint>
 #include <fstream>
 #include "MinHook.h"
 #include <Utility/Hooking.Patterns.h>
 #include <chrono>
 #include <thread>
+#include <format>
+#include <ctime>
 
 #ifdef _M_AMD64
-
 #pragma optimize("", off)
 #pragma comment(lib, "Ws2_32.lib")
 
-extern LPCSTR hookPort;
-static uintptr_t imageBase;
-static unsigned char hasp_buffer[0xD40];
-static bool isFreePlay;
-static bool isEventMode2P;
-static bool isEventMode4P;
-static bool ForceFullTune;
-static bool ForceNeon;
-static bool CarTuneNeonThread;
-static const char* ipaddr;
-static DWORD mileageValue = 0;
-static int NeonColour;
+#pragma endregion
+
+#pragma region globals
+
+// If this is set, logging will be enabled
+// and debug functions will be included in
+// the compilation
+
+#define _DEBUG
+
+#pragma region packets
 
 // Data for IC card, Force Feedback etc OFF. 
-static unsigned char settingData[405] = {
+static uint8_t settingData[405] = {
 	0x1F, 0x8B, 0x08, 0x08, 0x53, 0x6A, 0x8B, 0x5A, 0x00, 0x00, 0x73, 0x65, 
 	0x74, 0x74, 0x69, 0x6E, 0x67, 0x2E, 0x6C, 0x75, 0x61, 0x00, 0x85, 0x93, 
 	0xC9, 0x6E, 0xC2, 0x30, 0x10, 0x86, 0xEF, 0x79, 0x0A, 0x5E, 0x80, 0x8A, 
@@ -67,7 +70,7 @@ static unsigned char settingData[405] = {
 };
 
 // FOR FREEPLAY
-static unsigned char terminalPackage1_Free[79] = {
+static uint8_t terminalPackage1_Free[79] = {
 	0x01, 0x04, 0x4B, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x12, 0x12, 0x0C,
@@ -77,7 +80,7 @@ static unsigned char terminalPackage1_Free[79] = {
 	0x00, 0x28, 0x00, 0xEC, 0x72, 0x00, 0x41
 };
 
-static unsigned char terminalPackage2_Free[139] = {
+static uint8_t terminalPackage2_Free[139] = {
 	0x01, 0x04, 0x87, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x14, 0x12, 0x0C,
@@ -92,7 +95,7 @@ static unsigned char terminalPackage2_Free[139] = {
 	0x00, 0x28, 0x00, 0x99, 0x4E, 0xC6, 0x14
 };
 
-static unsigned char terminalPackage3_Free[79] = {
+static uint8_t terminalPackage3_Free[79] = {
 	0x01, 0x04, 0x4B, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x19, 0x12, 0x0C,
@@ -102,7 +105,7 @@ static unsigned char terminalPackage3_Free[79] = {
 	0x00, 0x28, 0x00, 0x89, 0x93, 0x3A, 0x22
 };
 
-static unsigned char terminalPackage4_Free[139] = {
+static uint8_t terminalPackage4_Free[139] = {
 	0x01, 0x04, 0x87, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x2E, 0x12, 0x0C,
@@ -117,7 +120,7 @@ static unsigned char terminalPackage4_Free[139] = {
 	0x00, 0x28, 0x00, 0x55, 0x42, 0x47, 0xD5
 };
 
-static unsigned char terminalPackage5_Free[79] = {
+static uint8_t terminalPackage5_Free[79] = {
 	0x01, 0x04, 0x4B, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x2F, 0x12, 0x0C,
@@ -127,7 +130,7 @@ static unsigned char terminalPackage5_Free[79] = {
 	0x00, 0x28, 0x00, 0x9C, 0xC9, 0xE0, 0x73
 };
 
-static unsigned char terminalPackage6_Free[139] = {
+static uint8_t terminalPackage6_Free[139] = {
 	0x01, 0x04, 0x87, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x6A, 0x12, 0x0C,
@@ -143,7 +146,7 @@ static unsigned char terminalPackage6_Free[139] = {
 };
 
 // FOR COIN ENTRY!
-static unsigned char terminalPackage1_Coin[75] = {
+static uint8_t terminalPackage1_Coin[75] = {
 	0x01, 0x04, 0x47, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x00, 0x2A, 0x12, 0x08, 0x0B, 0x12, 0x0C, 0x32, 0x38, 
@@ -153,7 +156,7 @@ static unsigned char terminalPackage1_Coin[75] = {
 	0x06, 0x41, 0x0B
 };
 
-static unsigned char terminalPackage2_Coin[135] = {
+static uint8_t terminalPackage2_Coin[135] = {
 	0x01, 0x04, 0x83, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x00, 0x2A, 0x12, 0x08, 0x39, 0x12, 0x0C, 0x32, 0x38, 
@@ -168,7 +171,7 @@ static unsigned char terminalPackage2_Coin[135] = {
 	0xF1, 0x0D, 0xB2
 };
 
-static unsigned char terminalPackage3_Coin[75] = {
+static uint8_t terminalPackage3_Coin[75] = {
 	0x01, 0x04, 0x47, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x00, 0x2A, 0x12, 0x08, 0x3A, 0x12, 0x0C, 0x32, 0x38, 
@@ -178,7 +181,7 @@ static unsigned char terminalPackage3_Coin[75] = {
 	0x25, 0x31, 0x0D
 };
 
-static unsigned char terminalPackage4_Coin[135] = {
+static uint8_t terminalPackage4_Coin[135] = {
 	0x01, 0x04, 0x83, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x00, 0x2A, 0x12, 0x08, 0x57, 0x12, 0x0C, 0x32, 0x38, 
@@ -193,7 +196,7 @@ static unsigned char terminalPackage4_Coin[135] = {
 	0x8B, 0x15, 0xCB
 };
 
-static unsigned char terminalPackage5_Coin[79] = {
+static uint8_t terminalPackage5_Coin[79] = {
 	0x01, 0x04, 0x4B, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x58, 0x12, 0x0C,
@@ -203,7 +206,7 @@ static unsigned char terminalPackage5_Coin[79] = {
 	0x00, 0x28, 0x00, 0x3E, 0xB1, 0xB7, 0x22
 };
 
-static unsigned char terminalPackage6_Coin[139] = {
+static uint8_t terminalPackage6_Coin[139] = {
 	0x01, 0x04, 0x87, 0x00, 0x12, 0x14, 0x0A, 0x00, 0x10, 0x04, 0x18, 0x00,
 	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x40, 0x00, 0x48, 0x00,
 	0x50, 0x00, 0x1A, 0x02, 0x5A, 0x00, 0x2A, 0x12, 0x08, 0x77, 0x12, 0x0C,
@@ -217,6 +220,225 @@ static unsigned char terminalPackage6_Coin[139] = {
 	0x20, 0x00, 0x52, 0x0B, 0x08, 0x64, 0x10, 0xDE, 0x0F, 0x18, 0x05, 0x20,
 	0x00, 0x28, 0x00, 0xBD, 0x07, 0xCF, 0xDC
 };
+
+#pragma endregion
+
+#pragma region constants
+
+// **** Save Data Filenames ****
+
+// Settings data filename
+#define SETTINGS_FILENAME "opensettings.sav"
+
+// Story data filename
+#define STORY_FILENAME "openprogress.sav"
+
+// Versus data filename
+#define VERSUS_FILENAME "openversus.sav"
+
+// Mileeage data filename
+#define MILE_FILENAME "openmileage.sav"
+
+// Folder path for cars
+#define CAR_FILEPATH "OpenParrot_Cars"
+
+// Folder path for template files
+#define TEMPLATE_FILEPATH "Templates"
+
+// Log file for time attack match results
+#define TA_CSV_FILENAME "timeattack.csv"
+
+// **** Data Region Sizes ****
+
+// I don't know how big all of these are for this game yet
+
+// Settings region load/save size
+#define SETTINGS_DATA_SIZE 0x38
+
+// Versus region load/save size
+// #define VERSUS_DATA_SIZE 0x100
+
+// Story region load/save size
+#define STORY_DATA_SIZE 0x2000
+
+// Miles region load/save size
+#define MILE_DATA_SIZE 0x8
+
+// Car region load/save size
+#define CAR_DATA_SIZE 0xE0
+
+// GT Wing load/save size
+#define GTWING_DATA_SIZE 0x30
+
+// String File Lengths
+
+// I don't know how big all of these are for this game yet
+
+// Maximum sticker length (32 bytes, 8 characters)
+#define STICKER_LENGTH 0x10
+
+// Maximum profile length name (255 characters)
+#define PROFILE_LENGTH 0xFF
+
+// Maximum region length (3 characters)
+#define REGION_LENGTH 0x3
+
+// Number of valid license plate regions
+#define REGION_COUNT 0x2F
+
+// Maximum title length (16 Characters)
+#define TITLE_LENGTH 0x10
+
+// Maximum name length (16 bytes, 5 characters)
+#define NAME_LENGTH 0x10
+
+// Pointer Addresses
+
+// Save Data Location Constant
+#define SAVE_OFFSET 0x1E183F8
+
+// Settings Data Offset (Within Save Data Region)
+#define SETTINGS_OFFSET 0x448
+
+// Story Data Offset (Within Save Data Region)
+#define STORY_OFFSET 0x178
+
+// Mile Data Offset (Within Save Data Region)
+#define MILE_OFFSET 0x2E8
+
+// Car Data Offset (Within Save Data Region)
+#define CAR_OFFSET 0x2D8
+
+// Car Name Offset (Within Car Save Data Region)
+#define CAR_NAME_OFFSET 0x20
+
+// Car GT Wing Offset (Within Car Save Data Region)
+#define CAR_GTWING_OFFSET 0x50
+
+// Car Title Offset (Within Car Save Data Region)
+#define CAR_TITLE_OFFSET 0x78
+
+// Window Sticker Offset (Within Car Save Data Region)
+#define CAR_WINDOW_STICKER_OFFSET 0x88
+
+// Car Region Offset (Within Car Save Data Region)
+#define CAR_REGION_OFFSET 0xB8
+
+// *** uint8_t (Memory Storage) Objects ***
+
+// Row which is used to end the sticker region
+// Without this written to the sticker second row, 
+// the sticker does not display.
+static uint8_t stringTerminator[0x10] = {
+	0x0F, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+	0x0F, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
+};
+
+// No idea if this will change or not lol
+
+// Car region codes
+static const char* regionCodes[REGION_COUNT] = {
+	"OCR", "ARG", "AUS", "AUT",
+	"BHR", "BEL", "BRA", "BRN",
+	"CAN", "CHL", "CHN", "DNK",
+	"FIN", "FRA", "DEU", "HKG",
+	"HUN", "IND", "IDN", "ITA",
+	"JPN", "KOR", "MAC", "MYS",
+	"MEX", "NLD", "NZL", "OMN",
+	"PRY", "PER", "PHL", "QAT",
+	"RUS", "SAU", "SGP", "ZAF",
+	"ESP", "LKA", "CHE", "TWN",
+	"THA", "TUR", "ARE", "GBR",
+	"USA", "URY", "VNM"
+};
+
+#pragma endregion
+
+#pragma region variables
+
+// Car code of the selected car (in the menu)
+static uint8_t selectedCarCode;
+
+static uint8_t carData[CAR_DATA_SIZE];
+
+// *** Char Array (String) Variables ***
+
+// Car filename string
+static char carFileName[FILENAME_MAX];
+
+// User profile path (either 'CustomName' or '.')
+static char profilePath[FILENAME_MAX];
+
+// General save path
+static char savePath[FILENAME_MAX];
+
+// Car folder path
+static char carPath[FILENAME_MAX];
+
+// Time attack csv path
+static char taCsvPath[FILENAME_MAX];
+
+// Title string storage
+static char carTitle[TITLE_LENGTH];
+
+// Car name (i.e. G U E S T)
+static char carName[NAME_LENGTH];
+
+// Custom name (i.e. Scrubbs)
+static char customName[PROFILE_LENGTH];
+
+// *** Boolean Variables ***
+
+// Sets if saving is allowed or not
+static bool saveOk = false;
+
+// Terminal emulator settings
+static bool isFreePlay;
+static bool isEventMode2P;
+static bool isEventMode4P;
+
+// Sets if loading is allowed
+static bool loadOk = false;
+
+// MT6 Stuff
+
+// Force full tune switch
+static bool ForceFullTune;
+
+// Force neon switch
+static bool ForceNeon;
+
+// Force FT / Neon Thread switch
+static bool CarTuneNeonThread;
+
+// *** Misc. Variables ***
+
+// Hook port
+extern LPCSTR hookPort;
+
+// Base game memory address
+static uintptr_t imageBase;
+
+// Hasp buffer memory
+static uint8_t hasp_buffer[0xD40];
+
+// Network adapter IP Address
+static const char* ipaddr;
+
+// Neon colour int
+static int NeonColour;
+
+// External FFB Variables
+extern int* ffbOffset;
+extern int* ffbOffset2;
+extern int* ffbOffset3;
+extern int* ffbOffset4;
+
+#pragma endregion
+
+#pragma endregion
+
+#pragma region hasp
 
 #define HASP_STATUS_OK 0
 static unsigned int Hook_hasp_login(int feature_id, void* vendor_code, int hasp_handle) {
@@ -233,14 +455,14 @@ static unsigned int Hook_hasp_logout(int hasp_handle) {
 	return HASP_STATUS_OK;
 }
 
-static unsigned int Hook_hasp_encrypt(int hasp_handle, unsigned char* buffer, unsigned int buffer_size) {
+static unsigned int Hook_hasp_encrypt(int hasp_handle, uint8_t* buffer, unsigned int buffer_size) {
 #ifdef _DEBUG
 	OutputDebugStringA("hasp_encrypt\n");
 #endif
 	return HASP_STATUS_OK;
 }
 
-static unsigned int Hook_hasp_decrypt(int hasp_handle, unsigned char* buffer, unsigned int buffer_size) {
+static unsigned int Hook_hasp_decrypt(int hasp_handle, uint8_t* buffer, unsigned int buffer_size) {
 #ifdef _DEBUG
 	OutputDebugStringA("hasp_decrypt\n");
 #endif
@@ -255,7 +477,7 @@ static unsigned int Hook_hasp_get_size(int hasp_handle, int hasp_fileid, unsigne
 	return HASP_STATUS_OK;
 }
 
-static unsigned int Hook_hasp_read(int hasp_handle, int hasp_fileid, unsigned int offset, unsigned int length, unsigned char* buffer) {
+static unsigned int Hook_hasp_read(int hasp_handle, int hasp_fileid, unsigned int offset, unsigned int length, uint8_t* buffer) {
 #ifdef _DEBUG
 	OutputDebugStringA("hasp_read\n");
 #endif
@@ -263,9 +485,12 @@ static unsigned int Hook_hasp_read(int hasp_handle, int hasp_fileid, unsigned in
 	return HASP_STATUS_OK;
 }
 
-static unsigned int Hook_hasp_write(int hasp_handle, int hasp_fileid, unsigned int offset, unsigned int length, unsigned char* buffer) {
+static unsigned int Hook_hasp_write(int hasp_handle, int hasp_fileid, unsigned int offset, unsigned int length, uint8_t* buffer) {
 	return HASP_STATUS_OK;
 }
+#pragma endregion
+
+#pragma region hook
 
 typedef int (WINAPI* BIND)(SOCKET, CONST SOCKADDR*, INT);
 static BIND pbind = NULL;
@@ -288,26 +513,33 @@ static unsigned int WINAPI Hook_bind(SOCKET s, const sockaddr* addr, int namelen
 	}
 }
 
-// Save data dump memory block
-static unsigned char saveData[0x2000];
+#pragma endregion
 
-// Car code of the selected car (in the menu)
-unsigned char selectedCarCodeMt6;
+#pragma region time
+// Set system date patch by pockywitch
+typedef bool (WINAPI* SETSYSTEMTIME)(SYSTEMTIME* in);
+static SETSYSTEMTIME pSetSystemTime = NULL;
 
-// Sets if saving is allowed or not
-static bool saveOk = false;
+static bool WINAPI Hook_SetSystemTime(SYSTEMTIME* in)
+{
+	return TRUE;
+}
 
-// If custom car is used
-static bool customCar = false;
+// Returns the current system time
+static tm getCurrentTime()
+{
+	// Create a new std::time object
+	auto t = std::time(nullptr);
 
-// Sets if loading is allowed
-static bool loadOk = false;
+	// Get the local system time
+	auto time = *std::localtime(&t);
 
-// Car save data reserved memory
-static unsigned char carData[0xFF];
+	// Return the time object
+	return time;
+}
+#pragma endregion
 
-// Car filename string
-static char carFileName[0xFF];
+#pragma region utility
 
 // SaveOk(void): Void
 // Enables saving
@@ -317,80 +549,18 @@ static int SaveOk()
 	return 1;
 }
 
-// Save Data Location Constant
-static uintptr_t saveLocation = 0x1E183F8;
+// Functions in this are are only used in debug mode
 
-// setCarTuneNeons(void): Int
-// If the currently loaded car is NOT fully tuned, 
-// updates the power and handling values to be fully
-// tuned (16 for each). If they are already fully tuned,
-// does not change any values.
-static int setCarTuneNeons()
-{
-	// Car save hex address
-	uintptr_t carSaveLocation = *(uintptr_t*)((*(uintptr_t*)(imageBase + saveLocation)) + 0x2D8);
-
-	// Force neon is set
-	if (ForceNeon)
-	{
-		// Set the neon colour
-		injector::WriteMemory<BYTE>(carSaveLocation + 0x60, NeonColour, true);
-	}
-
-	// Force full tune is set
-	if (ForceFullTune)
-	{
-		// Dereference the power / handling values from the memory address
-
-		auto powerValue = injector::ReadMemory<uint8_t>(carSaveLocation + 0x74, true);
-		auto handleValue = injector::ReadMemory<uint8_t>(carSaveLocation + 0x80, true);
-
-		// If the power and handling values do not add up to fully tuned
-		if (powerValue + handleValue < 0x22)
-		{
-			// Car is not fully tuned, force it to the default full tune
-			injector::WriteMemory<uint8_t>(carSaveLocation + 0x74, 0x11, true);
-			injector::WriteMemory<uint8_t>(carSaveLocation + 0x80, 0x11, true);
-		}
-	}
-
-	// Updated
-	return 1;
-}
-
-// SpamCarTuneNeons(LPVOID): DWORD WINAPI
-// Function which runs in a secondary thread if the forceFullTune
-// option is selected in the compiler. If the player's car is not fully
-// tuned, it is forcibly set to max tune. If the player's car is already
-// fully tuned, it is left alone. 
-static DWORD WINAPI SpamCarTuneNeons(LPVOID)
-{
-	// Loops while the program is running
-	while (true)
-	{
-		// Sleep for 16ms
-		Sleep(16);
-
-		// Spam the car tune update thread
-		setCarTuneNeons();
-	}
-}
-
+#ifdef _DEBUG
 // ******************************************** //
-// ************ Debug Data Logging ************ //
+// ************ Development  Tools ************ //
 // ******************************************** //
 
-// ************* Global Variables ************* //
-
-// **** String Variables
-
-// Debugging event log file
-static std::string logfile = "wmmt6_errors.txt";
-
-// writeLog(filename: String, message: String): Int
+// writeMessage(filename: String, message: String): Int
 // Given a filename string and a message string, appends
-// the message to the given file.
-static int writeLog(std::string filename, std::string message)
+// the message to the given file. Returns a status code 
+// of 0 if successful, and a code of 1 if failed.
+static int writeMessage(std::string filename, std::string message, bool timestamp = false, bool newline = false)
 {
 	// Log file to write to
 	std::ofstream eventLog;
@@ -401,8 +571,25 @@ static int writeLog(std::string filename, std::string message)
 	// File open success
 	if (eventLog.is_open())
 	{
+		// If timestamp switch is applied
+		if (timestamp)
+		{
+			// Get the current system time
+			tm currentTime = getCurrentTime();
+
+			// Add the timestamp to the message
+			eventLog << "[" << std::put_time(&currentTime, "%d-%m-%Y %H-%M-%S") << "] ";
+		}
+
 		// Write the message to the file
 		eventLog << message;
+
+		// Newline switch applied
+		if (newline)
+		{
+			// Add the newline to the message
+			eventLog << "\n";
+		}
 
 		// Close the log file handle
 		eventLog.close();
@@ -417,32 +604,18 @@ static int writeLog(std::string filename, std::string message)
 	}
 }
 
-// writeDump(filename: Char*, data: unsigned char *, size: size_t): Int
-static int writeDump(char* filename, unsigned char* data, size_t size)
+// Debugging event log file
+static std::string logfile = "wmmt6_errors.txt";
+
+// writeLog(message: String, logLevel: int): Void
+// Given a message and a log level, writes a 
+static int writeLog(std::string message)
 {
-	// Open the file with the provided filename
-	FILE* file = fopen(filename, "wb");
-
-	// File opened successfully
-	if (file)
-	{
-		// Write the data to the file
-		fwrite((void*)data, 1, size, file);
-
-		// Close the file
-		fclose(file);
-
-		// Return success status
-		return 0;
-	}
-	else // Failed to open
-	{
-		// Return failure status
-		return 1;
-	}
+	// Write to the log file (with timestamp and newline)
+	return writeMessage(logfile, message, true, true);
 }
 
-// writeMemory(memory: uintptr_t, value: unsigned char, size: size_t, force: bool): Void
+// writeMemory(memory: uintptr_t, value: uint8_t, size: size_t, force: bool): Void
 // Given a memory address, a value and a size sets every empty b
 static void writeMemory(uintptr_t memory, int value, size_t size, bool force = false)
 {
@@ -472,12 +645,61 @@ static void writeMemory(uintptr_t memory, int value, size_t size, bool force = f
 		}
 	}
 }
+#endif
+
+// writeDump(filename: Char*, data: uint8_t *, size: size_t): Int
+// Given a filename, a data buffer pointer and a size dumps 'size' data
+// from 'data' to the filename provided by 'filename'. This code is used
+// for most of the saving routines, and is not just for dev purposes. 
+// Returns a status code of 0 if successful, and a code of 1 if failed.
+static int writeDump(char* filename, uint8_t* data, size_t size)
+{
+#ifdef _DEBUG
+	writeLog("Call to writeDump...");
+#endif
+
+	// Open the file with the provided filename
+	FILE* file = fopen(filename, "wb");
+
+	// Success/failure status
+	bool status = 1;
+
+	// File opened successfully
+	if (file)
+	{
+		// Write the data to the file
+		fwrite((void*)data, 1, size, file);
+
+		// Close the file
+		fclose(file);
+
+		// Return success status
+		status = 0;
+	}
+
+#ifdef _DEBUG
+	status ? writeLog("writeDump failed.") : writeLog("writeDump success.");
+#endif
+
+	// Return success code
+	return status;
+}
 
 // dumpMemory(filename: char*, memory: uintptr_t, size: size_t): Void
+// Given a filename, a pointer to a position in memory and a size, dumps
+// 'size' amount of data from 'memory' and writes it to the file 'filename'.
+// Returns a status code of 0 if successful, and a code of 1 if failed.
 static int dumpMemory(char* filename, uintptr_t memory, size_t size)
 {
+#ifdef _DEBUG
+	writeLog("Call to dumpMemory...");
+#endif
+
 	// Create the array to dump the memory data to
-	unsigned char* data = (unsigned char*)malloc(size);
+	uint8_t* data = (uint8_t*)malloc(size);
+
+	// Success/failure status
+	bool status = 1;
 
 	// If malloc is successful
 	if (data)
@@ -489,26 +711,1326 @@ static int dumpMemory(char* filename, uintptr_t memory, size_t size)
 		memcpy(data, (void*)memory, size);
 
 		// Write the memory to a file
-		writeDump(filename, data, size);
+		status = writeDump(filename, data, size);
 
 		// Free the allocated memory
 		free(data);
-
-		// Success
-		return 1;
 	}
 
-	// Failure
-	return 0;
+#ifdef _DEBUG
+	status ? writeLog("dumpMemory failed.") : writeLog("dumpMemory success.");
+#endif
+
+	return status;
 }
+
+#ifdef _DEBUG
+// Number of seconds to wait between writes
+static int dumpMemoryDelay;
+static std::string dumpMemoryFolder;
+static uintptr_t dumpMemoryAddr;
+static size_t dumpMemorySize;
+
+// dumpMemoryThread(pArguments: void*): DWORD WINAPI
+static DWORD WINAPI watchMemoryThread(void* pArguments)
+{
+	writeLog("Call to watchMemoryThread...");
+
+	// File to dump the current memory to
+	char path[FILENAME_MAX];
+
+	// Loop counter
+	int i = 0;
+
+	// Infinite loop
+	while (true)
+	{
+		// Empty the path string
+		memset(path, 0x0, FILENAME_MAX);
+
+		// Write the path to the new file to the string
+		sprintf(path, "%s\\%i.bin", dumpMemoryFolder.c_str(), i);
+
+		// Dump the contents of the address to the file
+		dumpMemory(path, dumpMemoryAddr, dumpMemorySize);
+
+		// Wait for 'delay' number of seconds before dumping again
+		std::this_thread::sleep_for(std::chrono::seconds(dumpMemoryDelay));
+
+		// Increment the counter
+		i++;
+	}
+
+	writeLog("watchMemoryThread done.");
+}
+
+// watchMemory(char * filename, uintptr_t memory, size_t size, int delay)
+// Given a filename (folder path), memory pointer, size and delay continiously
+// dumps 'size' data from memory address 'memory' incrementally to files in 
+// the folder 'filename'. Memory will be dumped incrementally every 'delay' seconds.
+// Unfortunately due to the reliance on global variables, only one dumpMemoryThread
+// can be running at any time.
+static void watchMemory(char* filename, uintptr_t memory, size_t size, int delay)
+{
+	writeLog("Call to watchMemory...");
+
+	// Update the dumpMemoryFolder variable
+	dumpMemoryFolder = std::string(filename);
+
+	// Create the path to the folder 'filename'
+	std::filesystem::create_directories(dumpMemoryFolder);
+
+	// Update the other global variables for the thread
+
+	dumpMemoryDelay = delay;
+	dumpMemoryAddr = memory;
+	dumpMemorySize = size;
+
+	// Start the memory dump thread
+	CreateThread(0, 0, watchMemoryThread, 0, 0, 0);
+
+	writeLog("watchMemory done.");
+}
+
+#endif
+
+#pragma endregion
+
+#pragma region time_attack
+
+// saveTimeAttackData(filepath: char*): Int
+// Given a filepath, saves the time attack data
+// from the current play session to a file in 
+// memory.
+static int saveTimeAttackRecord()
+{
+#ifdef _DEBUG
+	writeLog("Call to saveTimeAttackRecord...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// Address where the  car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// Address where the car settings data starts
+	uintptr_t settingsSaveBase = *(uintptr_t*)(savePtr + SETTINGS_OFFSET);
+
+	// Add the time attack offset to the story pointer
+	uintptr_t timeAttackPtr = *(uintptr_t*)(savePtr + STORY_OFFSET) + 0x2D0;
+
+	// Status code boolean
+	bool status = 1;
+
+	// Time Attack output stream
+	std::ofstream taOfstream;
+
+	// Open the time attack file for appending
+	taOfstream.open(std::string(taCsvPath), std::ios_base::app);
+
+	// If the filestream opens successfully
+	if (taOfstream.is_open())
+	{
+		// Write the time attack data to a new row in the file
+
+		// (Mostly) discovered time attack data
+		// This is where the time attack data gets stored, BEFORE it gets cleared.
+		// Unfortunately, we can't do much with this currently without finding out
+		// where it gets stashed after the time attack screen ends.
+
+		// Time Attack Offsets:
+		// 0x188 - Final Time in Milliseconds
+		// 0x18C - ??
+		// 0x194 - Sector 1 time in ms
+		// 0x198 - Sector 2 time in ms
+		// 0x19C - Sector 3 time in ms
+		// 0x1A0 - Sector 4 time in ms
+		// 0x1A4 - Sector 5 time in ms (not verified)
+		// 0x1A8 - Sector 6 time in ms (not verified)
+		// 0x1AC - Sector 7 time in ms (not verified)
+		// 0x1C0 - Pointer (??)
+		// 0x1C8 - TA Games Played (This Session)
+		// 0x1D8 - ??
+		// 0x1DC - ??
+		// 0x1E0 - ??
+		// 0x1E4 - Course ID (enum)
+
+		// Output Format:
+		// 1. Game Code (e.g. wmmt5, wmmt5dxp, etc.)
+		// 2. Time Submitted (time_t)
+		// 3. Profile Name (e.g. Scrubbs)
+		// 4. Car Name (e.g. G U E S T)
+		// 5. Car Title (e.g. Wangan Beginner)
+		// 6. Car Code (e.g. 0x7F = S2K)
+		// 7. Car Rank (e.g. 0x1 = N)
+		// 8. Car Region (e.g. 0x0 = OCR)
+		// 9. Transmission (e.g. 0x0 = Auto)
+		// 5. Course ID (e.g. 0x1 = C1 Inbound)
+		// 6. Final Time
+		// 7. Sector 1 (ms)
+		// 8. Sector 2 (ms)
+		// 9. Sector 3 (ms)
+		// 10. Sector 4 (ms)
+		// 11. Sector 5 (ms)
+		// 12. Sector 6 (ms)
+		// 13. Sector 7 (ms)
+
+		// Get the car info from the car save region
+		uint8_t carRegion = injector::ReadMemory<uint8_t>(carSaveBase + 0x28, true);
+		uint8_t carCode = injector::ReadMemory<uint8_t>(carSaveBase + 0x34, true);
+		uint8_t carRank = injector::ReadMemory<uint8_t>(carSaveBase + 0x84, true);
+
+		// Get the settings info from the settings region
+		uint8_t transmission = injector::ReadMemory<uint8_t>(settingsSaveBase + 0x0D, true); // Transmission offset
+
+		// Get the course code from the time attack save region
+		uint8_t courseCode = injector::ReadMemory<uint8_t>(timeAttackPtr + 0x4, true); // Course selected
+
+		// Sector times
+		uint32_t sectors[8] = {
+
+			// 0x188 - Final Time in Milliseconds
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x0, true),
+
+			// 0x194 - Sector 1 time in ms
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0xC, true),
+
+			// 0x198 - Sector 2 time in ms
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x10, true),
+
+			// 0x198 - Sector 3 time in ms
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x14, true),
+
+			// 0x198 - Sector 4 time in ms
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x18, true),
+
+			// 0x198 - Sector 5 time in ms
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x1C, true),
+
+			// 0x198 - Sector 6 time in ms
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x20, true),
+
+			// 0x198 - Sector 7 time in ms
+			injector::ReadMemory<uint32_t>(timeAttackPtr + 0x24, true)
+		};
+
+		// Get the current system time
+		tm currentTime = getCurrentTime();
+
+		// Write the time to the stream
+		taOfstream <<
+			"wmmt6," << // Game Code (e.g. wmmt5, wmmt5dxp, etc.)
+			mktime(&currentTime) << "," << // Submitted time (local timezone)
+			customName << "," << // Profile Name (e.g. Scrubbs)
+			carName << "," << // Car Name (e.g. G U E S T)
+			carTitle << "," << // Car Title (e.g. Wangan Beginner)
+			std::to_string(carCode) << "," << // Car Code (e.g. 0x7F)
+			std::to_string(carRank) << "," << // Car Rank (e.g. 0x1 = N)
+			std::to_string(carRegion) << "," << // Car Region (e.g. 0x0 = OCR)
+			std::to_string(transmission) << "," << // Transmission (e.g. 0x0 = Auto)
+			std::to_string(courseCode) << "," << // Course ID (e.g. 0x1 = C1 Inbound)
+			sectors[0] << "," << // Final time (milliseconds)
+			sectors[1] << "," << // Sector 1 (milliseconds)
+			sectors[2] << "," << // Sector 2 (milliseconds)
+			sectors[3] << "," << // Sector 3 (milliseconds)
+			sectors[4] << "," << // Sector 4 (milliseconds)
+			sectors[5] << "," << // Sector 5 (milliseconds)
+			sectors[6] << "," << // Sector 6 (milliseconds)
+			sectors[7] << std::endl; // Sector 7 (milliseconds)
+
+		// Success status
+		status = 0;
+	}
+
+#ifdef _DEBUG
+	status ? writeLog("saveTimeAttackRecord failed.") : writeLog("saveTimeAttackRecord success.");
+#endif
+
+	// Return status code
+	return status;
+}
+
+// watchTmeAttack(LPVOID): DWORD WINAPI
+// Watches the time attack region to see
+// if a time has been written to memory. 
+// If a time is detected, it is saved to
+// the times.csv file.
+static DWORD WINAPI watchTimeAttack(LPVOID)
+{
+#ifdef _DEBUG
+	writeLog("Call to watchTimeAttack...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// watchMemory("story_ptr", storySaveBase + 0x2B0, 0x200, 15);
+
+	// Story save data offset + Time Attack offset + Final Time offset
+	uintptr_t finalTimePtr = *(uintptr_t*)(savePtr + STORY_OFFSET) + 0x2D0;
+
+	// Get the final time
+	uint32_t finalTime;
+
+	// Last saved time
+	uint32_t lastSavedTime = 0;
+
+	// Records if the time has 
+	// already been saved or not
+	bool saved = false;
+
+	// Infinite loop
+	while (true)
+	{
+		// Get the current integer value at the final time offset
+		finalTime = injector::ReadMemory<uint32_t>(finalTimePtr, true);
+
+		// If the final time is set
+		if (finalTime != 2147483647)
+		{
+			// If it does not match the last saved time
+			if (finalTime != lastSavedTime)
+			{
+				// If the time has not been saved yet
+				if (!saved)
+				{
+					// Call the save function
+					saveTimeAttackRecord();
+
+					// Update the last saved time
+					lastSavedTime = finalTime;
+
+					// Set saved to true
+					saved = true;
+
+					// No need to run again for at least another ~2 minutes
+					std::this_thread::sleep_for(std::chrono::minutes(2));
+
+					// Should prevent duplicate insertions
+				}
+			}
+		}
+		else // Final time is not set
+		{
+			// Set saved to false
+			saved = false;
+		}
+
+		// Wait for 'delay' milliseconds before checking again
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+	}
+
+#ifdef _DEBUG
+	writeLog("watchTimeAttack done.");
+#endif
+}
+
+#pragma endregion
+
+#pragma region load_save
+
+#pragma region cars
+
+#pragma region tune
+
+// setCarTuneNeons(void): Int
+// If the currently loaded car is NOT fully tuned, 
+// updates the power and handling values to be fully
+// tuned (16 for each). If they are already fully tuned,
+// does not change any values.
+static int setCarTuneNeons()
+{
+	// Car save hex address
+	uintptr_t carSAVE_OFFSET = *(uintptr_t*)((*(uintptr_t*)(imageBase + SAVE_OFFSET)) + CAR_OFFSET);
+
+	// Force neon is set
+	if (ForceNeon)
+	{
+		// Set the neon colour
+		injector::WriteMemory<BYTE>(carSAVE_OFFSET + 0x60, NeonColour, true);
+	}
+
+	// Force full tune is set
+	if (ForceFullTune)
+	{
+		// Dereference the power / handling values from the memory address
+
+		auto powerValue = injector::ReadMemory<uint8_t>(carSAVE_OFFSET + 0x74, true);
+		auto handleValue = injector::ReadMemory<uint8_t>(carSAVE_OFFSET + 0x80, true);
+
+		// If the power and handling values do not add up to fully tuned
+		if (powerValue + handleValue < 0x22)
+		{
+			// Car is not fully tuned, force it to the default full tune
+			injector::WriteMemory<uint8_t>(carSAVE_OFFSET + 0x74, 0x11, true);
+			injector::WriteMemory<uint8_t>(carSAVE_OFFSET + 0x80, 0x11, true);
+		}
+	}
+
+	// Updated
+	return 1;
+}
+
+// SpamCarTuneNeons(LPVOID): DWORD WINAPI
+// Function which runs in a secondary thread if the forceFullTune
+// option is selected in the compiler. If the player's car is not fully
+// tuned, it is forcibly set to max tune. If the player's car is already
+// fully tuned, it is left alone. 
+static DWORD WINAPI SpamCarTuneNeons(LPVOID)
+{
+	// Loops while the program is running
+	while (true)
+	{
+		// Sleep for 16ms
+		Sleep(16);
+
+		// Spam the car tune update thread
+		setCarTuneNeons();
+	}
+}
+
+#pragma endregion
+
+#pragma region car_pointers
+
+#pragma region custom_sticker
+
+// saveCustomSticker(filename: char*): Int
+// Given a filename, saves the default custom name
+// attribute to the file. Returns a status code 
+// of 0 if successful, and a code of 1 if failed.
+static int saveCustomSticker()
+{
+#ifdef _DEBUG
+	writeLog("Call to saveCustomSticker...");
+#endif
+
+	// Status code (default: Not created)
+	bool status = 1;
+
+	// If it does not exist, create the folder for template files
+	std::filesystem::create_directories(TEMPLATE_FILEPATH);
+
+	// Dump the default name to the file
+	char path[FILENAME_MAX];
+	sprintf(path, "%s\\custom.sticker", TEMPLATE_FILEPATH);
+
+	// If the file does not exist, create the sample custom name
+	if (!FileExists(path))
+	{
+		// Success status for the custom sticker dump
+		status = writeDump(path, stringTerminator, STICKER_LENGTH);
+	}
+
+#ifdef _DEBUG
+	status ? writeLog("saveCustomSticker failed.") : writeLog("saveCustomSticker success.");
+#endif
+
+	// Return status code
+	return status;
+}
+
+// loadCustomSticker(filename: char*): Int
+// Given a filename, loads the custom sticker 
+// attribute to the file. Returns a status code 
+// of 0 if successful, and a code of 1 if failed.
+static int loadCustomSticker()
+{
+#ifdef _DEBUG
+	writeLog("Call to loadCustomSticker...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// Address where the window sticker is stored
+	uintptr_t stickerPtr = *(uintptr_t*)(carSaveBase + CAR_WINDOW_STICKER_OFFSET);
+
+	// Success status (default: Failed to open file)
+	int status = 1;
+
+	// File exists status
+	bool file_exists = true;
+
+	// Path to the file
+	char path[FILENAME_MAX];
+	memset(path, 0x0, FILENAME_MAX);
+
+	// Test for a car-specific name file
+
+	// Get the path to the car-specific file
+	sprintf(path, "%s\\%08X.sticker", carPath, selectedCarCode);
+
+	// Car-specific file exists
+	if (!FileExists(path))
+	{
+		// Get the path to the profile-specific file
+		sprintf(path, "%s\\custom.sticker", profilePath);
+
+		// Profile-specific file exists
+		if (!FileExists(path))
+		{
+			// Do not load the file
+			file_exists = false;
+		}
+	}
+
+	// If either the profile or car 
+	// specific files were found
+	if (file_exists)
+	{
+		// Open the file with the file name
+		FILE* file = fopen(path, "rb");
+
+		// File is opened successfully
+		if (file)
+		{
+			// Get the length of the file
+			fseek(file, 0, SEEK_END);
+			int fsize = ftell(file);
+
+			// If the file has the right size
+			if (fsize == STICKER_LENGTH)
+			{
+				// Reset to start of the file 
+				// and read it into the car 
+				// data variable
+				fseek(file, 0, SEEK_SET);
+
+				// Sticker string storage
+				char sticker[STICKER_LENGTH];
+
+				// Empty the title array
+				memset(sticker, 0x0, STICKER_LENGTH);
+
+				// Read the string content from the file
+				fread(sticker, 0x1, STICKER_LENGTH, file);
+
+				// Write the new title to the string value
+				memcpy((void*)stickerPtr, sticker, STICKER_LENGTH);
+
+				// Write the string end line characters to the second row of the pointer
+				memcpy((void*)(stickerPtr + 0x10), stringTerminator, STICKER_LENGTH);
+
+				// Close the file
+				fclose(file);
+
+				// Success
+				status = 0;
+			}
+			else // Sticker file is wrong size
+			{
+				// Incorrect file size 
+				status = 2;
+			}
+		}
+	}
+	else // No files exist
+	{
+		// Save sample custom name file
+		saveCustomSticker();
+	}
+
+#ifdef _DEBUG
+	switch (status)
+	{
+	case 0: // Success
+		writeLog("loadCustomSticker success.");
+		break;
+	case 1: // No file
+		writeLog("loadCustomSticker failed: No file. Default file created.");
+		break;
+	case 2: // File wrong size
+		writeLog("loadCustomSticker failed: Wrong file size.");
+		break;
+	default: // Generic error
+		writeLog("loadCustomSticker failed.");
+		break;
+	}
+#endif
+
+	// Return status code
+	return status;
+}
+
+#pragma endregion
+
+#pragma region custom_name
+
+// saveCustomName(filename: char*): Int
+// Given a filename, saves the default custom name
+// attribute to the file. Returns a status code 
+// of 0 if successful, and a code of 1 if failed.
+static int saveCustomName()
+{
+#ifdef _DEBUG
+	writeLog("Call to saveCustomName...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// _DEBUG: Address where the player name (might be) saved
+	uintptr_t namePtr = *(uintptr_t*)(carSaveBase + CAR_NAME_OFFSET);
+
+	// Status code (default: Not created)
+	bool status = 1;
+
+	// If it does not exist, create the folder for template files
+	std::filesystem::create_directories(TEMPLATE_FILEPATH);
+
+	// Dump the default name to the file
+	char path[FILENAME_MAX];
+	sprintf(path, "%s\\custom.name", TEMPLATE_FILEPATH);
+
+	// If the file does not exist, create the sample custom name
+	if (!FileExists(path))
+	{
+		// Success status for the custom sticker dump
+		status = dumpMemory(path, namePtr, NAME_LENGTH);
+	}
+
+#ifdef _DEBUG
+	status ? writeLog("saveCustomName not saved.") : writeLog("saveCustomName saved.");
+#endif
+
+	// Return status code
+	return status;
+}
+
+// loadCustomName(filename: char*): Int
+// Given a filename, loads the default custom name
+// attribute from the file. If the file does not
+// exist, it is created using saveCustomName. 
+// Returns true on a successful execution.
+static int loadCustomName()
+{
+#ifdef _DEBUG
+	writeLog("Call to loadCustomName...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// _DEBUG: Address where the player name (might be) saved
+	uintptr_t namePtr = *(uintptr_t*)(carSaveBase + CAR_NAME_OFFSET);
+
+	// Success status (default: Failed to open file)
+	int status = 1;
+
+	// File exists status
+	bool file_exists = true;
+
+	// Path to the file
+	char path[FILENAME_MAX];
+	memset(path, 0x0, FILENAME_MAX);
+
+	// Test for a car-specific name file
+
+	// Get the path to the car-specific file
+	sprintf(path, "%s\\%08X.name", carPath, selectedCarCode);
+
+	// Car-specific file doesn't exist
+	if (!FileExists(path))
+	{
+		// Get the path to the profile-specific file
+		sprintf(path, "%s\\custom.name", profilePath);
+
+		// Profile-specific file doesn't exist
+		if (!FileExists(path))
+		{
+			// Do not load the file
+			file_exists = false;
+		}
+	}
+
+	// If either the profile or car 
+	// specific files were found
+	if (file_exists)
+	{
+		// Open the file with the file name
+		FILE* file = fopen(path, "rb");
+
+		// File is opened successfully
+		if (file)
+		{
+			// Get the length of the file
+			fseek(file, 0, SEEK_END);
+			int fsize = ftell(file);
+
+			// If the file has the right size
+			if (fsize == NAME_LENGTH)
+			{
+				// Reset to start of the file 
+				// and read it into the car 
+				// data variable
+				fseek(file, 0, SEEK_SET);
+
+				// Car Name string storage
+				char name[NAME_LENGTH];
+
+				// Empty the title array
+				memset(name, 0x0, NAME_LENGTH);
+
+				// Read the string content from the file
+				fread(name, 0x1, NAME_LENGTH, file);
+
+				// Empty the existing title content
+				memset((void*)namePtr, 0x0, NAME_LENGTH);
+
+				// Write the new title to the string value
+				memcpy((void*)namePtr, name, NAME_LENGTH);
+
+				// Close the file
+				fclose(file);
+
+				// Success
+				status = 0;
+			}
+			else // Name file is the wrong size
+			{
+				// Incorrect file size
+				status = 2;
+			}
+		}
+	}
+	else // No files exist
+	{
+		// Save sample custom name file
+		saveCustomName();
+	}
+
+	// Copy the name of the car into the car name variable
+	memcpy(carName, (void*)namePtr, NAME_LENGTH);
+
+#ifdef _DEBUG
+	switch (status)
+	{
+	case 0: // Success
+		writeLog("loadCustomName success.");
+		break;
+	case 1: // No file
+		writeLog("loadCustomName failed: No file.");
+		break;
+	case 2: // File wrong size
+		writeLog("loadCustomName failed: Wrong file size.");
+		break;
+	default: // Generic error
+		writeLog("loadCustomName failed.");
+		break;
+	}
+#endif
+
+	// Return status code
+	return status;
+}
+
+#pragma endregion
+
+#pragma region custom_gt_wing
+
+// saveCustomGTWing(filename: char*): Int
+// Given a filename, saves the default custom 
+// GT wing data to the file. Returns a status code 
+// of 0 if successful, and a code of 1 if failed.
+static int saveCustomGTWing()
+{
+#ifdef _DEBUG
+	writeLog("Call to saveCustomGTWing...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// _DEBUG: Address where the player name (might be) saved
+	uintptr_t gtWingPtr = *(uintptr_t*)(carSaveBase + CAR_GTWING_OFFSET);
+
+	// Status code (default: Not created)
+	bool status = 1;
+
+	// If it does not exist, create the folder for template files
+	std::filesystem::create_directories(TEMPLATE_FILEPATH);
+
+	// Dump the default name to the file
+	char path[FILENAME_MAX];
+	sprintf(path, "%s\\custom.gtwing", TEMPLATE_FILEPATH);
+
+	// If the file does not exist, create the sample custom name
+	if (!FileExists(path))
+	{
+		// Success status for the custom sticker dump
+		status = dumpMemory(path, gtWingPtr, GTWING_DATA_SIZE);
+	}
+
+#ifdef _DEBUG
+	status ? writeLog("saveCustomGTWing failed.") : writeLog("saveCustomGTWing success.");
+#endif
+
+	// Return status code
+	return status;
+}
+
+// loadCustomGTWing(filename: char*): Int
+// Given a filename, loads the custom GT wing
+// attribute from the file. If the file does not
+// exist, it is created using saveCustomGTWing. 
+// Returns true on a successful execution.
+static int loadCustomGTWing()
+{
+#ifdef _DEBUG
+	writeLog("Call to loadCustomGTWing...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// _DEBUG: Address where the player name (might be) saved
+	uintptr_t gtWingPtr = *(uintptr_t*)(carSaveBase + CAR_GTWING_OFFSET);
+
+	// Success status (default: Failed to open file)
+	int status = 1;
+
+	// File exists status
+	bool file_exists = true;
+
+	// Path to the file
+	char path[FILENAME_MAX];
+	memset(path, 0x0, FILENAME_MAX);
+
+	// Test for a car-specific name file
+
+	// Get the path to the car-specific file
+	sprintf(path, "%s\\%08X.gtwing", carPath, selectedCarCode);
+
+	// Car-specific file exists
+	if (!FileExists(path))
+	{
+		// Get the path to the profile-specific file
+		sprintf(path, "%s\\custom.gtwing", profilePath);
+
+		// Profile-specific file exists
+		if (!FileExists(path))
+		{
+			// Do not load the file
+			file_exists = false;
+		}
+	}
+
+	// If either the profile or car 
+	// specific files were found
+	if (file_exists)
+	{
+		// Open the file with the file name
+		FILE* file = fopen(path, "rb");
+
+		// File is opened successfully
+		if (file)
+		{
+			// Get the length of the file
+			fseek(file, 0, SEEK_END);
+			int fsize = ftell(file);
+
+			// If the file has the right size
+			if (fsize == GTWING_DATA_SIZE)
+			{
+				// Reset to start of the file 
+				// and read it into the car 
+				// data variable
+				fseek(file, 0, SEEK_SET);
+
+				// Array for storing gt wing data temporarily
+				unsigned char gtWingData[GTWING_DATA_SIZE];
+
+				// Zero out the gt wing data storage
+				memset(gtWingData, 0x0, GTWING_DATA_SIZE);
+
+				// Copy the contents from the file into the storage
+				fread(gtWingData, 0x1, GTWING_DATA_SIZE, file);
+
+				// Memcpys for the gt wing data will go here :)
+				memcpy((void*)(gtWingPtr + 0x10), (void*)(gtWingData + 0x10), 0x10); // Entire of row 2
+				memcpy((void*)(gtWingPtr + 0x20), (void*)(gtWingData + 0x20), 0x10); // Entire of row 3
+
+				// Close the file
+				fclose(file);
+
+				// Success
+				status = 0;
+			}
+			else // Name file is the wrong size
+			{
+				// Incorrect file size
+				status = 2;
+			}
+		}
+	}
+	else // No files exist
+	{
+		// Save sample custom name file
+		saveCustomGTWing();
+	}
+
+#ifdef _DEBUG
+	switch (status)
+	{
+	case 0: // Success
+		writeLog("loadCustomGTWing success.");
+		break;
+	case 1: // No file
+		writeLog("loadCustomGTWing failed: No file. Default file created.");
+		break;
+	case 2: // File wrong size
+		writeLog("loadCustomGTWing failed: Wrong file size.");
+		break;
+	default: // Generic error
+		writeLog("loadCustomGTWing failed.");
+		break;
+	}
+#endif
+
+	// Return status code
+	return status;
+}
+
+#pragma endregion
+
+#pragma region custom_title
+
+// savecarTitle(filepath: char*): Int
+// Saves the custom title value to the current car's title, 
+// otherwise creates a default title.
+static int saveCustomTitle()
+{
+#ifdef _DEBUG
+	writeLog("Call to savecarTitle...");
+#endif
+
+	// Create the title array
+	char title[TITLE_LENGTH];
+
+	// Empty the title array
+	memset(title, 0x0, TITLE_LENGTH);
+
+	// Write the default title to the string
+	sprintf(title, "Wangan Beginner");
+
+	// Status code (Default fail)
+	bool status = 1;
+
+	// If it does not exist, create the folder for template files
+	std::filesystem::create_directories(TEMPLATE_FILEPATH);
+
+	// Dump the default name to the file
+	char path[FILENAME_MAX];
+	sprintf(path, "%s\\custom.name", TEMPLATE_FILEPATH);
+
+	// If the file does not exist, create the sample custom name
+	if (!FileExists(path))
+	{
+		// Open the file for the title
+		FILE* file = fopen(path, "w+");
+
+		// File is opened successfully
+		if (file)
+		{
+			// Write the title string to the file
+			fwrite((void*)title, 1, TITLE_LENGTH, file);
+
+			// Close the file handle
+			fclose(file);
+
+			// Success
+			status = 0;
+		}
+	}
+
+#ifdef _DEBUG
+	status ? writeLog("savecarTitle not saved.") : writeLog("savecarTitle saved.");
+#endif
+
+	// Return status code
+	return status;
+}
+
+// loadcarTitle(filepath: char*): Int
+// Loads the title string from the title file for the given car.
+static int loadCustomTitle()
+{
+#ifdef _DEBUG
+	writeLog("Call to loadcarTitle...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// Address where the title is saved
+	uintptr_t titlePtr = *(uintptr_t*)(carSaveBase + CAR_TITLE_OFFSET);
+
+	// Success status (default: Failed to open file)
+	int status = 1;
+
+	// File exists status
+	bool file_exists = true;
+
+	// Path to the file
+	char path[FILENAME_MAX];
+	memset(path, 0x0, FILENAME_MAX);
+
+	// Test for a car-specific name file
+
+	// Get the path to the car-specific file
+	sprintf(path, "%s\\%08X.title", carPath, selectedCarCode);
+
+	// Car-specific file exists
+	if (!FileExists(path))
+	{
+		// Get the path to the profile-specific file
+		sprintf(path, "%s\\custom.title", profilePath);
+
+		// Profile-specific file exists
+		if (!FileExists(path))
+		{
+			// Do not load the file
+			file_exists = false;
+		}
+	}
+
+	// If either the profile or car 
+	// specific files were found
+	if (file_exists)
+	{
+		// Open the file with the file name
+		FILE* file = fopen(path, "rb");
+
+		// File is opened successfully
+		if (file)
+		{
+			// Get the length of the file
+			fseek(file, 0, SEEK_END);
+			int fsize = ftell(file);
+
+			// If the file has the right size
+			if (fsize == TITLE_LENGTH)
+			{
+				// Reset to start of the file 
+				// and read it into the car 
+				// data variable
+				fseek(file, 0, SEEK_SET);
+
+				// Empty the title array
+				memset(carTitle, 0x0, TITLE_LENGTH);
+
+				// Read the string content from the file
+				fread(carTitle, 0x1, TITLE_LENGTH, file);
+
+				// Empty the existing title content
+				memset((void*)titlePtr, 0x0, TITLE_LENGTH);
+
+				// Write the new title to the string value
+				memcpy((void*)titlePtr, carTitle, TITLE_LENGTH);
+
+				// Close the file
+				fclose(file);
+
+				// Success
+				status = 0;
+			}
+			else // Title file is wrong size
+			{
+				// Incorrect file size 
+				status = 2;
+			}
+		}
+	}
+
+	// If failure status is set
+	if (status > 0)
+	{
+		// Copy the default title into the custom title variable
+		memcpy(carTitle, (void*)titlePtr, TITLE_LENGTH);
+
+		// Save sample custom name file
+		saveCustomTitle();
+	}
+
+#ifdef _DEBUG
+	switch (status)
+	{
+	case 0: // Success
+		writeLog("loadcarTitle success.");
+		break;
+	case 1: // No file
+		writeLog("loadcarTitle failed: No file. Template file created.");
+		break;
+	case 2: // File wrong size
+		writeLog("loadcarTitle failed: Wrong file size. Template file created.");
+		break;
+	default: // Generic error
+		writeLog("loadcarTitle failed.");
+		break;
+	}
+#endif
+
+	// Return status code
+	return status;
+}
+
+#pragma endregion
+
+#pragma region custom_region
+
+// saveCustomRegion(filepath: char*): Int
+// Saves the custom title value to the current car's title, 
+// otherwise creates a default title.
+static int saveCustomRegion()
+{
+#ifdef _DEBUG
+	writeLog("Call to saveCustomRegion...");
+#endif
+
+	// Status code (Default fail)
+	bool status = 1;
+
+	// Create the region array
+	char region[REGION_LENGTH];
+
+	// Empty the region array
+	memset(region, 0x0, REGION_LENGTH);
+
+	// Write the default region to the string
+	sprintf(region, "JPN");
+
+	// If it does not exist, create the folder for template files
+	std::filesystem::create_directories(TEMPLATE_FILEPATH);
+
+	// Dump the default name to the file
+	char path[FILENAME_MAX];
+	sprintf(path, "%s\\custom.region", TEMPLATE_FILEPATH);
+
+	// If the file does not exist, create the sample custom name
+	if (!FileExists(path))
+	{
+		// Open the file for the region
+		FILE* file = fopen(path, "w+");
+
+		// File is opened successfully
+		if (file)
+		{
+			// Write the region string to the file
+			fwrite((void*)region, 1, REGION_LENGTH, file);
+
+			// Close the file handle
+			fclose(file);
+
+			// Success
+			status = 0;
+		}
+	}
+
+#ifdef _DEBUG
+	status ? writeLog("saveCustomRegion not saved.") : writeLog("saveCustomRegion saved.");
+#endif
+
+	// Return status code
+	return status;
+}
+
+// loadcarTitle(filepath: char*): Int
+// Loads the title string from the title file for the given car.
+static int loadCustomRegion()
+{
+#ifdef _DEBUG
+	writeLog("Call to loadCustomRegion...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// Address where the title is saved
+	uintptr_t regionPtr = *(uintptr_t*)(carSaveBase + CAR_REGION_OFFSET);
+
+	// Success status (default: Failed to open file)
+	int status = 1;
+
+	// File exists status
+	bool file_exists = true;
+
+	// Path to the file
+	char path[FILENAME_MAX];
+	memset(path, 0x0, FILENAME_MAX);
+
+	// Test for a car-specific name file
+
+	// Get the path to the car-specific file
+	sprintf(path, "%s\\%08X.region", carPath, selectedCarCode);
+
+	// Car-specific file exists
+	if (!FileExists(path))
+	{
+		// Get the path to the profile-specific file
+		sprintf(path, "%s\\custom.region", profilePath);
+
+		// Profile-specific file exists
+		if (!FileExists(path))
+		{
+			// Do not load the file
+			file_exists = false;
+		}
+	}
+
+	// If either the profile or car 
+	// specific files were found
+	if (file_exists)
+	{
+		// Open the file with the file name
+		FILE* file = fopen(path, "rb");
+
+		// File is opened successfully
+		if (file)
+		{
+			// Get the length of the file
+			fseek(file, 0, SEEK_END);
+			int fsize = ftell(file);
+
+			// If the file has the right size
+			if (fsize == REGION_LENGTH)
+			{
+				// Reset to start of the file 
+				// and read it into the car 
+				// data variable
+				fseek(file, 0, SEEK_SET);
+
+				// Title string storage
+				char region[REGION_LENGTH];
+
+				// Empty the title array
+				memset(region, 0x0, REGION_LENGTH);
+
+				// Read the string content from the file
+				fread(region, 0x1, REGION_LENGTH, file);
+
+				// If the region code is not JPN
+				if (strcmp(region, "JPN") != 0)
+				{
+					// Default: 0x14 (JPN)
+					uint8_t region_id = 0x14;
+
+					// Loop over all of the regions in the list
+					for (int i = 0; i < REGION_COUNT; i++)
+					{
+						// If the region loaded matches the region
+						if (strcmp(region, regionCodes[i]) == 0)
+						{
+							// Set the region id to this offset
+							region_id = i;
+
+							// No need to keep looping, break
+							break;
+						}
+					}
+
+					// Set the player's license plate region to their custom region 
+					memset((void*)(carSaveBase + 0x28), region_id, 0x1);
+				}
+
+				// Empty the existing title content
+				memset((void*)regionPtr, 0x0, REGION_LENGTH);
+
+				// Write the new title to the string value
+				memcpy((void*)regionPtr, region, REGION_LENGTH);
+
+				// Close the file
+				fclose(file);
+
+				// Success
+				status = 0;
+			}
+			else // Title file is wrong size
+			{
+				// Incorrect file size 
+				status = 2;
+			}
+		}
+	}
+	else // No files exist
+	{
+		// Save sample custom name file
+		saveCustomRegion();
+	}
+
+#ifdef _DEBUG
+	switch (status)
+	{
+	case 0: // Success
+		writeLog("loadCustomRegion success.");
+		break;
+	case 1: // No file
+		writeLog("loadCustomRegion failed: No file. Default file created.");
+		break;
+	case 2: // File wrong size
+		writeLog("loadCustomRegion failed: Wrong file size.");
+		break;
+	default: // Generic error
+		writeLog("loadCustomRegion failed.");
+		break;
+	}
+#endif
+
+	// Return status code
+	return status;
+}
+
+#pragma endregion
+
+#pragma endregion
+
+#pragma region car_main
 
 // loadCarFile(filename: char*): Int
 // Given a filename, loads the data from
 // the car file into memory. 
 static int loadCarFile(char* filename)
 {
+#ifdef _DEBUG
+	writeLog("Call to loadCarFile...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// Car Profile saving
+	memset(carData, 0, CAR_DATA_SIZE);
+
 	// Open the file with the filename
 	FILE* file = fopen(filename, "rb");
+
+	// Status code default: Failed to open
+	int status = 1;
 
 	// File open OK
 	if (file)
@@ -518,57 +2040,64 @@ static int loadCarFile(char* filename)
 		int fsize = ftell(file);
 
 		// If the file has the right size
-		if (fsize == 0xE0)
+		if (fsize == CAR_DATA_SIZE)
 		{
 			// Reset to start of the file and read it into the car data variable
 			fseek(file, 0, SEEK_SET);
 			fread(carData, fsize, 1, file);
 
 			// Dereference the memory location for the car save data
-			uintptr_t carSaveLocation = *(uintptr_t*)((*(uintptr_t*)(imageBase + saveLocation)) + 0x2D8);
+			uintptr_t carSAVE_OFFSET = *(uintptr_t*)((*(uintptr_t*)(imageBase + SAVE_OFFSET)) + CAR_OFFSET);
 
-			// memcpy((void*)(carSaveLocation + 0x00), carData + 0x00, 8); // Crash (Pointer)
-			memcpy((void*)(carSaveLocation + 0x08), carData + 0x08, 8); // ??
-			// memcpy((void*)(carSaveLocation + 0x10), carData + 0x10, 8); // Crash (Pointer)
-			memcpy((void*)(carSaveLocation + 0x18), carData + 0x18, 8); // ??
+			// memcpy((void*)(carSAVE_OFFSET + 0x00), carData + 0x00, 8); // Crash (Pointer)
+			// memcpy((void*)(carSAVE_OFFSET + 0x08), carData + 0x08, 8); // ??
+			// memcpy((void*)(carSAVE_OFFSET + 0x10), carData + 0x10, 8); // Crash (Pointer)
+			// memcpy((void*)(carSAVE_OFFSET + 0x18), carData + 0x18, 8); // ??
 
-			// memcpy((void*)(carSaveLocation + 0x20), carData + 0x20, 8); // Crash (Pointer)
-			memcpy((void*)(carSaveLocation + 0x28), carData + 0x28, 8); // Region (0x28)
-			memcpy((void*)(carSaveLocation + 0x30), carData + 0x30, 8); // Car ID (0x34)
-			// memcpy((void*)(carSaveLocation + 0x38), carData + 0x38, 4); // Stock Colour (0x38)
-			memcpy((void*)(carSaveLocation + 0x3C), carData + 0x3C, 4); // Custom Colour (0x3C)
+			// memcpy((void*)(carSAVE_OFFSET + 0x20), carData + 0x20, 8); // Crash (Pointer)
+			memcpy((void*)(carSAVE_OFFSET + 0x28), carData + 0x28, 8); // Region (0x28)
+			memcpy((void*)(carSAVE_OFFSET + 0x30), carData + 0x30, 8); // Car ID (0x34)
+			// memcpy((void*)(carSAVE_OFFSET + 0x38), carData + 0x38, 4); // Stock Colour (0x38)
+			memcpy((void*)(carSAVE_OFFSET + 0x3C), carData + 0x3C, 4); // Custom Colour (0x3C)
 
-			memcpy((void*)(carSaveLocation + 0x40), carData + 0x40, 8); // Rims (0x40), Rims Colour (0x44)
-			memcpy((void*)(carSaveLocation + 0x48), carData + 0x48, 8); // Aero (0x48), Hood (0x4C)
-			// memcpy((void*)(carSaveLocation + 0x50), carData + 0x50, 8); // Crash (Pointer)
-			memcpy((void*)(carSaveLocation + 0x58), carData + 0x58, 8); // Wing (0x58), Mirror (0x5C)
+			memcpy((void*)(carSAVE_OFFSET + 0x40), carData + 0x40, 8); // Rims (0x40), Rims Colour (0x44)
+			memcpy((void*)(carSAVE_OFFSET + 0x48), carData + 0x48, 8); // Aero (0x48), Hood (0x4C)
+			// memcpy((void*)(carSAVE_OFFSET + 0x50), carData + 0x50, 8); // Crash (Pointer)
+			memcpy((void*)(carSAVE_OFFSET + 0x58), carData + 0x58, 8); // Wing (0x58), Mirror (0x5C)
 
-			memcpy((void*)(carSaveLocation + 0x60), carData + 0x60, 8); // Neon (0x60), Trunk (0x64)
-			memcpy((void*)(carSaveLocation + 0x68), carData + 0x68, 8); // Plate Frame Type (0x68), Plate Frame Variant (0x6C)
-			memcpy((void*)(carSaveLocation + 0x70), carData + 0x70, 8); // Plate Frame Number (0x70-71), Power (0x74)
-			// memcpy((void*)(carSaveLocation + 0x78), carData + 0x78, 8); // Crash (Pointer)
+			memcpy((void*)(carSAVE_OFFSET + 0x60), carData + 0x60, 8); // Neon (0x60), Trunk (0x64)
+			memcpy((void*)(carSAVE_OFFSET + 0x68), carData + 0x68, 8); // Plate Frame Type (0x68), Plate Frame Variant (0x6C)
+			memcpy((void*)(carSAVE_OFFSET + 0x70), carData + 0x70, 8); // Plate Frame Number (0x70-71), Power (0x74)
+			// memcpy((void*)(carSAVE_OFFSET + 0x78), carData + 0x78, 8); // Crash (Pointer)
 
 			// Example for setting license plate number to 4 20:
-			memset((void*)(carSaveLocation + 0x71), 0x01, 0x1);
-			memset((void*)(carSaveLocation + 0x70), 0xA4, 0x1);
+			// memset((void*)(carSAVE_OFFSET + 0x71), 0x01, 0x1);
+			// memset((void*)(carSAVE_OFFSET + 0x70), 0xA4, 0x1);
 
-			memcpy((void*)(carSaveLocation + 0x80), carData + 0x80, 8); // Handling (0x80), Rank (0x84)
-			// memcpy((void*)(carSaveLocation + 0x88), carData + 0x88, 8); // Crash (Pointer)
-			memcpy((void*)(carSaveLocation + 0x90), carData + 0x90, 8); // Window Sticker Switch (0x90)
-			memcpy((void*)(carSaveLocation + 0x98), carData + 0x98, 8); // Window Sticker ID (0x98)
+			memcpy((void*)(carSAVE_OFFSET + 0x80), carData + 0x80, 8); // Handling (0x80), Rank (0x84)
+			// memcpy((void*)(carSAVE_OFFSET + 0x88), carData + 0x88, 8); // Crash (Pointer)
+			memcpy((void*)(carSAVE_OFFSET + 0x90), carData + 0x90, 8); // Window Sticker Switch (0x90)
+			memcpy((void*)(carSAVE_OFFSET + 0x98), carData + 0x98, 8); // Window Sticker ID (0x98)
 
-			// writeMemory(carSaveLocation + 0x90, 0x1, 0x1);
-			// writeMemory(carSaveLocation + 0x98, 0x10, 0x1);
+			// memcpy((void*)(carSAVE_OFFSET + 0xA0), carData + 0xA0, 8); // Crash (Pointer)
+			// memcpy((void*)(carSAVE_OFFSET + 0xA8), carData + 0xA8, 8); // Crash (Pointer)
+			memcpy((void*)(carSAVE_OFFSET + 0xB0), carData + 0xB0, 8); // ??
+			// memcpy((void*)(carSAVE_OFFSET + 0xB8), carData + 0xB8, 8); // Crash (Pointer)
 
-			// memcpy((void*)(carSaveLocation + 0xA0), carData + 0xA0, 8); // Crash (Pointer)
-			// memcpy((void*)(carSaveLocation + 0xA8), carData + 0xA8, 8); // Crash (Pointer)
-			memcpy((void*)(carSaveLocation + 0xB0), carData + 0xB0, 8); // ??
-			// memcpy((void*)(carSaveLocation + 0xB8), carData + 0xB8, 8); // Crash (Pointer)
 
-			// memcpy((void*)(carSaveLocation + 0xC0), carData + 0xC0, 8); // Crash (Pointer)
-			memcpy((void*)(carSaveLocation + 0xC8), carData + 0xC8, 8); // ??
-			memcpy((void*)(carSaveLocation + 0xD0), carData + 0xD0, 8); // ??
-			// memcpy((void*)(carSaveLocation + 0xD8), carData + 0xD8, 8); // Crash (Pointer)
+			// Could be something interesting, no idea what this one is :o
+			// memcpy((void*)(carSAVE_OFFSET + 0xC0), carData + 0xC0, 8); // Crash (Pointer)
+			memcpy((void*)(carSAVE_OFFSET + 0xC8), carData + 0xC8, 8); // ??
+			memcpy((void*)(carSAVE_OFFSET + 0xD0), carData + 0xD0, 8); // ??
+			// memcpy((void*)(carSAVE_OFFSET + 0xD8), carData + 0xD8, 8); // Crash (Pointer)
+
+			// Success
+			status = 0;
+		}
+		else // Car file is not the correct size
+		{
+			// Car file incorrect size code
+			status = 2;
 		}
 
 		// Disable loading
@@ -576,201 +2105,170 @@ static int loadCarFile(char* filename)
 
 		// Close the file
 		fclose(file);
-
-		// Success
-		return 1;
 	}
+#ifdef _DEBUG
+	switch (status)
+	{
+	case 0: // Success
+		writeLog("loadCarFile success.");
+		break;
+	case 1: // No file
+		writeLog("loadCarFile failed: No file.");
+		break;
+	case 2: // File wrong size
+		writeLog("loadCarFile failed: Wrong file size.");
+		break;
+	default: // Generic error
+		writeLog("loadCarFile failed.");
+		break;
+	}
+#endif
 
-	// Failed
-	return 0;
+	// Return status code
+	return status;
+}
+
+static int saveCarData()
+{
+#ifdef _DEBUG
+	writeLog("Call to saveCarData...");
+#endif
+
+	memset(carFileName, 0, FILENAME_MAX);
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// Save the file to the specific car filename
+	sprintf(carFileName, "%s\\%08X.car", carPath, selectedCarCode);
+
+	// Success status for the custom car file dump
+	bool status = dumpMemory(carFileName, carSaveBase, CAR_DATA_SIZE);
+
+#ifdef _DEBUG
+	status ? writeLog("saveCarData failed.") : writeLog("saveCarData success.");
+#endif
+
+	// Return status code
+	return status;
 }
 
 // loadCarData(filepath: char*): Void
 // Given a filepath, attempts to load a 
 // car file (either custom.car or specific
 // car file) from that folder.
-static int loadCarData(char* filepath)
+static int loadCarData()
 {
-	// Sleep for 1 second
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+#ifdef _DEBUG
+	writeLog("Call to loadCarData...");
+#endif
 
-	// Custom car disabled by default
-	customCar = false;
+	// Car file load success status
+	bool status = false;
 
-	// Miles path string
-	char carPath[0xFF];
-
-	// Set the milepath memory to zero
-	memset(carPath, 0, 0xFF);
-
-	// Copy the file path to the miles path
-	strcpy(carPath, filepath);
-
-	// Append the mileage filename to the string
-	strcat(carPath, "\\OpenParrot_Cars");
-
-	// Create the OpenParrot_cars directory at the given filepath
-	std::filesystem::create_directories(carPath);
-
-	// Get the path to the custom car file
-	sprintf(carFileName, "%s\\custom.car", carPath);
+	// Get the path to the specific car file
+	sprintf(carFileName, "%s\\%08X.car", carPath, selectedCarCode);
 
 	// If the custom car file exists
 	if (FileExists(carFileName))
 	{
 		// Load the custom car file
-		loadCarFile(carFileName);
-
-		// Enable custom car switch
-		customCar = true;
+		status = loadCarFile(carFileName);
 	}
-	else // No custom.car file
-	{
-		// Empty the car filename string
-		memset(carFileName, 0, 0xFF);
 
-		// Get the path to the specific car file
-		sprintf(carFileName, "%s\\%08X.car", carPath, selectedCarCodeMt6);
-
-		// If the specific car file exists
-		if (FileExists(carFileName))
-		{
-			// Load the car file
-			loadCarFile(carFileName);
-		}
-	}
+	// Load name/title/gtwing/etc. will go here :)
+	loadCustomName();
+	loadCustomGTWing();
+	loadCustomTitle();
+	loadCustomSticker();
+	loadCustomRegion();
 
 	// If the force full tune switch is set
 	if (ToBool(config["Tune"]["Force Full Tune"]))
 	{
-		// Create the force full tune thread
-		// CreateThread(0, 0, forceFullTune, 0, 0, 0);
-
 		// Set the car to be fully tuned / force neons
 		setCarTuneNeons();
 	}
 
-	// Success
-	return 1;
+#ifdef _DEBUG
+	status ? writeLog("loadCarData failed.") : writeLog("loadCarData success.");
+#endif
+
+	// Return status code
+	return status;
 }
 
-static int saveCarData(char* filepath)
+#pragma endregion
+
+#pragma endregion
+
+#pragma region settings
+
+static int saveSettingsData()
 {
-	// Car Profile saving
-	memset(carData, 0, 0xFF);
-	memset(carFileName, 0, 0xFF);
+#ifdef _DEBUG
+	writeLog("Call to saveSettingData...");
+#endif
 
 	// Miles path string
-	char carPath[0xFF];
-
-	// Set the milepath memory to zero
-	memset(carPath, 0, 0xFF);
-
-	// Copy the file path to the miles path
-	strcpy(carPath, filepath);
+	char path[FILENAME_MAX];
 
 	// Append the mileage filename to the string
-	strcat(carPath, "\\OpenParrot_Cars");
-
-	// CreateDirectoryA(carPath, nullptr);
-
-	// Create the cars path folder
-	std::filesystem::create_directories(carPath);
-
-	// Copy the 0xE0 bytes from memory to the car data array
-	memcpy(carData, (void*)*(uintptr_t*)(*(uintptr_t*)(imageBase + saveLocation) + 0x2D8), 0xE0);
-
-	// If custom car is set
-	if (customCar)
-	{
-		// Save the file to custom.car
-		sprintf(carPath, "%s\\custom.car", carPath);
-	}
-	else // Custom car is not set
-	{
-		// Save the file to the specific car filename
-		sprintf(carPath, "%s\\%08X.car", carPath, selectedCarCodeMt6);
-	}
-
-	// Open the file at the given car path
-	FILE* carFile = fopen(carPath, "wb");
-
-	// Write the data from the array to the file
-	fwrite(carData, 1, 0xE0, carFile);
-	fclose(carFile);
-
-	// Success
-	return 1;
-}
-
-static int saveStoryData(char* filepath)
-{
-	// Miles path string
-	char storyPath[0xFF];
-
-	// Set the milepath memory to zero
-	memset(storyPath, 0, 0xFF);
-
-	// Copy the file path to the miles path
-	strcpy(storyPath, filepath);
-
-	// Append the mileage filename to the string
-	strcat(storyPath, "\\openprogress.sav");
+	// strcat(path, "\\openprogress.sav");
+	sprintf(path, "%s\\%s", savePath, SETTINGS_FILENAME);
 
 	// Save story data
 
 	// Address where player save data starts
-	uintptr_t saveDataBase = *(uintptr_t*)(imageBase + saveLocation);
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
 
-	// Zero out save data binary
-	memset(saveData, 0, 0x2000);
-
-	// Address where the story save data starts
-	uintptr_t storySaveBase = *(uintptr_t*)(saveDataBase + 0x178);
-
-	// Copy to saveData from the story save data index
-	memcpy(saveData, (void*)storySaveBase, 0x340);
+	// Address where the player story data starts
+	uintptr_t settingsPtr = *(uintptr_t*)(savePtr + SETTINGS_OFFSET);
 
 	// Dump the save data to openprogress.sav
-	writeDump(storyPath, saveData, 0x2000);
+	bool status = dumpMemory(path, settingsPtr, SETTINGS_DATA_SIZE);
 
-	//SaveStoryData();
-	//SaveCampaingHonorData();
-	//SaveStoryModeNoLoseHonorData();
-	//SaveOtherHonorData();
-	//SaveCampaingHonorData2();
+#ifdef _DEBUG
+	status ? writeLog("saveSettingData failed.") : writeLog("saveSettingData success.");
+#endif
 
-	// Success
-	return 1;
+	// Return status code
+	return status;
 }
 
-static uintptr_t saveGameOffset;
-
-static int loadStoryData(char* filepath)
+static int loadSettingsData()
 {
+#ifdef _DEBUG
+	writeLog("Call to loadSettingsData...");
+#endif
+
+	// Save data dump memory block
+	uint8_t settingsData[SETTINGS_DATA_SIZE];
+
 	// Zero out the save data array
-	memset(saveData, 0x0, 0x2000);
+	memset(settingsData, 0x0, SETTINGS_DATA_SIZE);
 
 	// Miles path string
-	char storyPath[0xFF];
-
-	// Set the milepath memory to zero
-	memset(storyPath, 0, 0xFF);
-
-	// Copy the file path to the miles path
-	strcpy(storyPath, filepath);
+	char path[FILENAME_MAX];
 
 	// Append the mileage filename to the string
-	strcat(storyPath, "\\openprogress.sav");
+	// strcat(path, "\\openprogress.sav");
+	sprintf(path, "%s\\%s", savePath, SETTINGS_FILENAME);
 
 	// Address where player save data starts
-	uintptr_t saveDataBase = *(uintptr_t*)(imageBase + saveLocation);
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
 
 	// Story save data offset
-	uintptr_t saveStoryBase = *(uintptr_t*)(saveDataBase + 0x178);
+	uintptr_t settingsPtr = *(uintptr_t*)(savePtr + SETTINGS_OFFSET);
 
 	// Open the openprogress file with read privileges	
-	FILE* file = fopen(storyPath, "rb");
+	FILE* file = fopen(path, "rb");
+
+	// Status code (default: failed to load file)
+	int status = 1;
 
 	// If the file exists
 	if (file)
@@ -782,35 +2280,246 @@ static int loadStoryData(char* filepath)
 		int fsize = ftell(file);
 
 		// Check file is correct size
-		if (fsize == 0x2000)
+		if (fsize == SETTINGS_DATA_SIZE)
 		{
 			// Reset seek index to start
 			fseek(file, 0, SEEK_SET);
 
-			// Read all of the contents of the file into saveData
-			fread(saveData, fsize, 1, file);
+			// Read all of the contents of the file into storyData
+			fread(settingsData, fsize, 1, file);
+
+			memcpy((void*)(settingsPtr + 0x20), (void*)(settingsData + 0x20), 0x10); // Third row (entire row)
+			memcpy((void*)(settingsPtr + 0x30), (void*)(settingsData + 0x30), 0x08); // Fourth row (entire row)
+
+			// Success code
+			status = 0;
+		}
+		else // Story file is incorrect size
+		{
+			// Incorrect size error code
+			status = 2;
+		}
+
+		// Close the file
+		fclose(file);
+	}
+	else // File does not exist
+	{
+		// Create the car settings file
+		saveSettingsData();
+	}
+
+	// If a non-default custom meter is selected in the drop-down
+	if (strcmp(config["General"]["Custom Meter"].c_str(), "Default") != 0)
+	{
+		// Not sure if I can clean this up, this is just how the MT6 code does the neons
+
+		// Big if-else block for the different meter settings
+
+		if (strcmp(config["General"]["Custom Meter"].c_str(), "White Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x1, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Yellow Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x2, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Red Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x3, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Special Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x4, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Blue Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x5, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Carbon Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x6, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Metallic Meter (Black)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x7, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Metallic Meter (Red)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x8, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Cyber Meter (Blue)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x9, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Cyber Meter (Red)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0xA, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Aluminium Meter (Blue)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0xB, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Aluminium Meter (Red)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0xC, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Camoflage Meter (Green)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0xD, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Camoflage Meter (Brown)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0xE, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Bronze Meter (Red)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0xF, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Bronze Meter (Brown)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x10, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Pirate Meter (Red)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x11, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Pirate Meter (Blue)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x12, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Fire Meter (Red)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x13, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Fire Meter (Blue)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x14, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Silver Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x15, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Gold Meter") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x16, 0x1);
+	}
+
+	// If a non-default custom soundtrack is selected in the drop-down
+	if (strcmp(config["General"]["Custom Soundtrack"].c_str(), "Default") != 0)
+	{
+		// Not sure if I can clean this up, this is just how the MT6 code does the neons
+
+		// Big if-else block for the different soundtrack settings
+
+		if (strcmp(config["General"]["Custom Soundtrack"].c_str(), "Maximum Tune 3/DX/DX+") == 0)
+			memset((void*)(settingsPtr + 0x28), 0x1, 0x1);
+		else if (strcmp(config["General"]["Custom Soundtrack"].c_str(), "10 Outrun") == 0)
+			memset((void*)(settingsPtr + 0x28), 0x2, 0x1);
+		else if (strcmp(config["General"]["Custom Soundtrack"].c_str(), "Maximum Tune 1/2") == 0)
+			memset((void*)(settingsPtr + 0x28), 0x3, 0x1);
+		else if (strcmp(config["General"]["Custom Soundtrack"].c_str(), "Maximum Tune R") == 0)
+			memset((void*)(settingsPtr + 0x28), 0x4, 0x1);
+		else if (strcmp(config["General"]["Custom Soundtrack"].c_str(), "Maximum Tune 4") == 0)
+			memset((void*)(settingsPtr + 0x28), 0x5, 0x1);
+	}
+
+#ifdef _DEBUG
+	switch (status)
+	{
+	case 0: // Success
+		writeLog("loadSettingsData success.");
+		break;
+	case 1: // No file
+		writeLog("loadSettingsData failed: No file. Default file will be created.");
+		break;
+	case 2: // File wrong size
+		writeLog("loadSettingsData failed: Wrong file size.");
+		break;
+	default: // Generic error
+		writeLog("loadSettingsData failed.");
+		break;
+	}
+#endif
+
+	// Return status code
+	return status;
+}
+
+#pragma endregion
+
+#pragma region story
+
+static int saveStoryData()
+{
+#ifdef _DEBUG
+	writeLog("Call to saveStoryData...");
+#endif
+
+	// Miles path string
+	char path[FILENAME_MAX];
+
+	// Append the mileage filename to the string
+	// strcat(path, "\\openprogress.sav");
+	sprintf(path, "%s\\%s", savePath, STORY_FILENAME);
+
+	// Save story data
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// Address where the player story data starts
+	uintptr_t storySaveBase = *(uintptr_t*)(savePtr + STORY_OFFSET);
+
+	// Dump the save data to openprogress.sav
+	bool status = dumpMemory(path, storySaveBase, STORY_DATA_SIZE);
+
+#ifdef _DEBUG
+	status ? writeLog("saveStoryData failed.") : writeLog("saveStoryData success.");
+#endif
+
+	// Return status code
+	return status;
+}
+
+static uintptr_t saveGameOffset;
+
+static int loadStoryData()
+{
+#ifdef _DEBUG
+	writeLog("Call to loadStoryData...");
+#endif
+
+	// Save data dump memory block
+	uint8_t storyData[STORY_DATA_SIZE];
+
+	// Zero out the save data array
+	memset(storyData, 0x0, STORY_DATA_SIZE);
+
+	// Miles path string
+	char path[FILENAME_MAX];
+
+	// Append the mileage filename to the string
+	sprintf(path, "%s\\%s", savePath, STORY_FILENAME);
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// Story save data offset
+	uintptr_t saveStoryBase = *(uintptr_t*)(savePtr + STORY_OFFSET);
+
+	// Open the openprogress file with read privileges	
+	FILE* file = fopen(path, "rb");
+
+	// Status code (default: failed to load file)
+	int status = 1;
+
+	// If the file exists
+	if (file)
+	{
+		// Get all of the contents from the file
+		fseek(file, 0, SEEK_END);
+
+		// Get the size of the file
+		int fsize = ftell(file);
+
+		// Check file is correct size
+		if (fsize == STORY_DATA_SIZE)
+		{
+			// Reset seek index to start
+			fseek(file, 0, SEEK_SET);
+
+			// Read all of the contents of the file into storyData
+			fread(storyData, fsize, 1, file);
 
 			// 0x00 - 70 23 - Should be able to use this to figure out what game a save is from
 
 			// (Mostly) discovered story data
 
 			// memcpy((void*)(saveStoryBase + 0xE0), saveData + 0xE0, 0x8); // ??
-			memcpy((void*)(saveStoryBase + 0xE8), saveData + 0xE8, 0x8); // Total Wins (0xE8)
-			memcpy((void*)(saveStoryBase + 0xF0), saveData + 0xF0, 0x8); // Chapter Progress (0xF4) (Bitmask)
-			memcpy((void*)(saveStoryBase + 0xF8), saveData + 0xF8, 0x8); // Current Chapter (0xF8)
-			memcpy((void*)(saveStoryBase + 0x100), saveData + 0x100, 0x8); // Win Streak (0x108)
-			// memcpy((void*)(saveStoryBase + 0x108), saveData + 0x108, 0x8); // ??
-			// memcpy((void*)(saveStoryBase + 0x110), saveData + 0x110, 0x8); // ??
-			memcpy((void*)(saveStoryBase + 0x118), saveData + 0x118, 0x8); // Locked Chapters (0x118) (Bitmask)
-			// memcpy((void*)(saveStoryBase + 0x120), saveData + 0x120, 0x8); // ??
+			memcpy((void*)(saveStoryBase + 0xE8), storyData + 0xE8, 0x8); // Total Wins (0xE8)
+			memcpy((void*)(saveStoryBase + 0xF0), storyData + 0xF0, 0x8); // Chapter Progress (0xF4) (Bitmask)
+			memcpy((void*)(saveStoryBase + 0xF8), storyData + 0xF8, 0x8); // Current Chapter (0xF8)
+			memcpy((void*)(saveStoryBase + 0x100), storyData + 0x100, 0x8); // Win Streak (0x108)
+			// memcpy((void*)(saveStoryBase + 0x108), storyData + 0x108, 0x8); // ??
+			// memcpy((void*)(saveStoryBase + 0x110), storyData + 0x110, 0x8); // ??
+			memcpy((void*)(saveStoryBase + 0x118), storyData + 0x118, 0x8); // Locked Chapters (0x118) (Bitmask)
+			// memcpy((void*)(saveStoryBase + 0x120), storyData + 0x120, 0x8); // ??
 
-			// Save data loaded successfully
-			loadOk = true;
+			// Success code
+			status = 0;
 		}
+		else // Story file is incorrect size
+		{
+			// Incorrect size error code
+			status = 2;
+		}
+
+		// Close the file
 		fclose(file);
 	}
 	else // No story file
 	{
+		// Feature is broken until I figure out how the story bitmask works better
+
+		/*
 		// If the start with 100 stories option is set
 		if (ToBool(config["Story"]["Start at 100 Stories"]))
 		{
@@ -823,178 +2532,231 @@ static int loadStoryData(char* filepath)
 			// Set the current chapter to 5 (5 Chapters cleared)
 			memset((void*)(saveStoryBase + 0xF8), 0x5, 0x1);
 		}
+		*/
 	}
 
-	//LoadStoryData();
-	//LoadCampaingHonorData();
-	//LoadStoryModeNoLoseHonorData();
-	//LoadOtherHonorData();
-	//LoadCampaingHonorData2();
+#ifdef _DEBUG
+	switch (status)
+	{
+	case 0: // Success
+		writeLog("loadStoryData success.");
+		break;
+	case 1: // No file
+		writeLog("loadStoryData failed: No file.");
+		break;
+	case 2: // File wrong size
+		writeLog("loadStoryData failed: Wrong file size.");
+		break;
+	default: // Generic error
+		writeLog("loadStoryData failed.");
+		break;
+	}
+#endif
 
-	// Success status
-	return 1;
+	// Return status code
+	return status;
 }
 
-static int loadMileData(char* filepath)
+#pragma endregion
+
+#pragma region miles
+
+static int saveMileData()
 {
+#ifdef _DEBUG
+	writeLog("Call to saveMileData...");
+#endif
+
+	// MT5DX+ Method
+	
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// Get the data storing the miles
+	auto mileData = (uintptr_t*)(savePtr + MILE_OFFSET);
+
 	// Miles path string
-	char milepath[0xFF];
-
-	// Set the milepath memory to zero
-	memset(milepath, 0, 0xFF);
-
-	// Copy the file path to the miles path
-	strcpy(milepath, filepath);
+	char path[FILENAME_MAX];
 
 	// Append the mileage filename to the string
-	strcat(milepath, "\\mileage.dat");
+	// strcat(path, "\\openprogress.sav");
+	sprintf(path, "%s\\%s", savePath, MILE_FILENAME);
+
+	// Load the miles file
+	FILE* file = fopen(path, "wb");
+
+	// Error code (default: failed)
+	bool status = 1;
+
+	// File opened successfully
+	if (file)
+	{
+		// Write the miles data from memory to the miles file
+		fwrite(mileData, 0x1, sizeof(mileData), file);
+
+		// Close the file
+		fclose(file);
+
+		// Success
+		status = 0;
+	}
+
+#ifdef _DEBUG
+	status ? writeLog("saveMileData failed.") : writeLog("saveMileData success.");
+#endif
+
+	// Return status code
+	return status;
+}
+
+static int loadMileData()
+{
+#ifdef _DEBUG
+	writeLog("Call to loadMileData...");
+#endif
+
+	// Mile data dump memory block
+	uint8_t mileData[MILE_DATA_SIZE];
+
+	// Zero out the mile data memory
+	memset(mileData, 0x0, MILE_DATA_SIZE);
+
+	// Miles path string
+	char path[FILENAME_MAX];
+
+	// Append the mileage filename to the string
+	sprintf(path, "%s\\%s", savePath, MILE_FILENAME);
 
 	// Path to the miles file
-	FILE* miles = fopen(milepath, "rb");
+	FILE* file = fopen(path, "rb");
+
+	// Success code (default: no file found)
+	int status = 1;
 
 	// File loaded OK
-	if (miles)
+	if (file)
 	{
 		// Get the size of the file
-		fseek(miles, 0, SEEK_END);
-		int mileSize = ftell(miles);
+		fseek(file, 0, SEEK_END);
+		int mileSize = ftell(file);
 
 		// If the file size is correct
-		if (mileSize == 0x4);
+		if (mileSize == MILE_DATA_SIZE)
 		{
-			// Load the content from the file into mileDatadxp
-			fseek(miles, 0, SEEK_SET);
-			fread(&mileageValue, 0x4, 0x1, miles);
+			// Load the content from the file into mileData
+			fseek(file, 0x0, SEEK_SET);
+			fread(mileData, mileSize, 0x1, file);
+
+			// Get the pointer to the memory location storing the miles
+			uintptr_t mileMemory = *(uintptr_t*)(imageBase + SAVE_OFFSET) + MILE_OFFSET;
+
+			// Copy the mile data from the file into the memory location
+			memcpy((void*)mileMemory, mileData, MILE_DATA_SIZE);
+
+			// Success code
+			status = 0;
+		}
+		else // Miles data file is an incorrect size
+		{
+			// Incorrect size error code
+			status = 2;
 		}
 
 		// Close the miles file
-		fclose(miles);
+		fclose(file);
 	}
 
-	// Success
-	return 1;
+#ifdef _DEBUG
+	switch (status)
+	{
+	case 0: // Success
+		writeLog("loadMileData success.");
+		break;
+	case 1: // No file
+		writeLog("loadMileData failed: No file.");
+		break;
+	case 2: // File wrong size
+		writeLog("loadMileData failed: Wrong file size.");
+		break;
+	default: // Generic error
+		writeLog("loadMileData failed.");
+		break;
+	}
+#endif
+
+	// Return status code
+	return status;
 }
 
-static int saveMileData(char* filepath)
-{
-	// Miles path string
-	char milepath[0xFF];
+#pragma endregion
 
-	// Set the milepath memory to zero
-	memset(milepath, 0, 0xFF);
-
-	// Copy the file path to the miles path
-	strcpy(milepath, filepath);
-
-	// Append the mileage filename to the string
-	strcat(milepath, "\\mileage.dat");
-
-	// Load the miles file
-	FILE* tempFile = fopen(milepath, "wb");
-
-	// Write the miles data from memory to the miles file
-	fwrite(&mileageValue, 0x1, 0x4, tempFile);
-
-	fclose(tempFile);
-
-	// Success
-	return 1;
-}
+#pragma region game
 
 static int SaveGameData()
 {
+#ifdef _DEBUG
+	writeLog("Call to saveGameData...");
+#endif
+
+	// Success/fail code (default: fail)
+	int status = 1;
+
 	// Saving is disabled
-	if (!saveOk)
-		return 1;
-
-	// Miles path string
-	char savePath[0xFF];
-
-	// Set the milepath memory to zero
-	memset(savePath, 0, 0xFF);
-
-	// Write the '.' into the load path
-	// sprintf(savePath, ".\\SaveData");
-	sprintf(savePath, ".");
-
-	// Seperate save file / cars per user profile
-	if (ToBool(config["Save"]["Save Per Custom Name"]))
+	if (saveOk)
 	{
-		// Get the profile name from the 
-		std::string name = config["General"]["CustomName"];
+		// Ensure the directory exists
+		std::filesystem::create_directories(savePath);
 
-		// Add the c string version of the profile name to the path
-		sprintf(savePath, "%s\\%s", savePath, name.c_str());
+		// Load the car save file
+		saveCarData();
+
+		// Load the openprogress.sav file
+		saveStoryData();
+
+		// Load the miles save file
+		saveMileData();
+
+		// Disable saving
+		saveOk = false;
+
+		// Success
+		status = 0;
 	}
 
-	// Seperate miles / story per car
-	if (ToBool(config["Save"]["Save Per Car"]))
-	{
-		// Need to get the hex code for the selected car
-
-		// Address where player save data starts
-		uintptr_t saveDataBase = *(uintptr_t*)(imageBase + saveLocation);
-
-		// Address where the car save data starts
-		uintptr_t carSaveBase = *(uintptr_t*)(saveDataBase + 0x108);
-
-		// If custom car is set
-		if (customCar)
-		{
-			// Add the car id to the save path
-			sprintf(savePath, "%s\\custom", savePath);
-		}
-		else // Custom car is not set
-		{
-			// Add the custom folder to the save path
-			sprintf(savePath, "%s\\%08X", savePath, selectedCarCodeMt6);
-		}
-	}
-
-	// Ensure the directory exists
-	std::filesystem::create_directories(savePath);
-
-	// Load the car save file
-	saveCarData(savePath);
-
-	// Load the openprogress.sav file
-	saveStoryData(savePath);
-
-	// Load the miles save file
-	saveMileData(savePath);
-
-	// Disable saving
-	saveOk = false;
+#ifdef _DEBUG
+	status ? writeLog("saveGameData failed.") : writeLog("saveGameData success.");
+#endif
 
 	// Success
-	return 1;
+	return status;
 }
 
 static int loadGameData()
 {
+	#ifdef _DEBUG
+		writeLog("Call to loadGameData...");
+	#endif
+
 	// Disable saving
 	saveOk = false;
 
-	// Miles path string
-	char loadPath[0xFF];
+	// Set the save path memory to zero
+	memset(savePath, 0, FILENAME_MAX);
 
-	// Set the milepath memory to zero
-	memset(loadPath, 0, 0xFF);
+	// Set the profile path memory to zero
+	memset(profilePath, 0, FILENAME_MAX);
 
 	// Write the '.' into the load path
-	// sprintf(loadPath, ".\\SaveData");
-	sprintf(loadPath, ".");
+	sprintf(profilePath, ".");
 
-	selectedCarCodeMt6 = *(DWORD*)(*(uintptr_t*)(*(uintptr_t*)(imageBase + saveLocation) + 0x2D8) + 0x34);
+	// Get the path to the selected car
+	selectedCarCode = *(DWORD*)(*(uintptr_t*)(*(uintptr_t*)(imageBase + SAVE_OFFSET) + CAR_OFFSET) + 0x34);
 
 	// Seperate save file / cars per user profile
 	if (ToBool(config["Save"]["Save Per Custom Name"]))
 	{
-		// Get the profile name from the 
-		std::string name = config["General"]["CustomName"];
-
 		// Add the c string version of the profile name to the path
-		sprintf(loadPath, "%s\\%s", loadPath, name.c_str());
+		sprintf(profilePath, "%s\\%s", profilePath, customName);
 	}
 
 	// Seperate miles / story per car
@@ -1002,59 +2764,82 @@ static int loadGameData()
 	{
 		// Need to get the hex code for the selected car
 
-		// Address where player save data starts
-		uintptr_t saveDataBase = *(uintptr_t*)(imageBase + saveLocation);
-
-		// Address where the car save data starts
-		uintptr_t carSaveBase = *(uintptr_t*)(saveDataBase + 0x108);
-
-		// If custom car is set
-		if (customCar)
-		{
-			// Add the car id to the save path
-			sprintf(loadPath, "%s\\custom", loadPath);
-		}
-		else // Custom car is not set
-		{
-			// Add the custom folder to the save path
-			sprintf(loadPath, "%s\\%08X", loadPath, selectedCarCodeMt6);
-		}
+		// Add the custom folder to the save path
+		sprintf(savePath, "%s\\%08X", profilePath, selectedCarCode);
+	}
+	else // Combine miles / story per car
+	{
+		// Save path is same as profile path
+		sprintf(savePath, "%s", profilePath);
 	}
 
-	// Ensure the directory exists
-	std::filesystem::create_directories(loadPath);
+	// Set the car path memory to zero
+	memset(carPath, 0, FILENAME_MAX);
+
+	// Set the path to the cars folder
+	sprintf(carPath, "%s\\%s", savePath, CAR_FILEPATH);
+
+	// Create the directories recursively
+	std::filesystem::create_directories(carPath);
+
+	// Sleep for 1 second
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 
 	// Load the car save file
-	loadCarData(loadPath);
+	loadCarData();
+
+	// Load the car settings file
+	loadSettingsData();
 
 	// Load the openprogress.sav file
-	loadStoryData(loadPath);
+	loadStoryData();
 
 	// Load the miles save file
-	loadMileData(loadPath);
+	loadMileData();
 
-	// dumpMemory("0x20.bin", carSaveLocation + 0x20, 0x100);
-	// dumpMemory("0x38.bin", carSaveLocation + 0x38, 0x100);
-	// dumpMemory("0x50.bin", carSaveLocation + 0x50, 0x100);
-	// dumpMemory("0x78.bin", carSaveLocation + 0x78, 0x100);
-	// dumpMemory("0x88.bin", carSaveLocation + 0x88, 0x100);
-	// dumpMemory("0xA0.bin", carSaveLocation + 0xA0, 0x100);
-	// dumpMemory("0xA8.bin", carSaveLocation + 0xA8, 0x100);
-	// dumpMemory("0xB8.bin", carSaveLocation + 0xB8, 0x100);
-	// dumpMemory("0xC0.bin", carSaveLocation + 0xC0, 0x100);
-	// dumpMemory("0xD8.bin", carSaveLocation + 0xD8, 0x100);
+	// Generate path to the time attack csv file
+	sprintf(taCsvPath, "%s\\%s", profilePath, TA_CSV_FILENAME);
 
-	// Success
-	return 1;
+	// If the time attack csv file exists
+	if (FileExists(taCsvPath))
+	{
+		// Start the time attack / versus monitor thread
+		CreateThread(0, 0, watchTimeAttack, 0, 0, 0);
+	}
+
+#ifdef _DEBUG
+	writeLog("loadGameData done.");
+#endif
+
+	return 0;
 }
 
 static void loadGame()
 {
+#ifdef _DEBUG
+	writeLog("Call to loadGame ...");
+#endif
+
 	// Runs after car data is loaded
 
 	// Load story data thread
 	std::thread t1(loadGameData);
 	t1.detach();
+
+#ifdef _DEBUG
+	writeLog("loadGame done.");
+#endif
+}
+
+#pragma endregion
+
+#pragma endregion
+
+#pragma region misc
+
+static int ReturnTrue()
+{
+	return 1;
 }
 
 static BOOL FileExists(char* szPath)
@@ -1065,12 +2850,7 @@ static BOOL FileExists(char* szPath)
 		!(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
-static int ReturnTrue()
-{
-	return 1;
-}
-
-static BYTE GenerateChecksum(unsigned char *myArray, int index, int length)
+static BYTE GenerateChecksum(uint8_t *myArray, int index, int length)
 {
 	BYTE crc = 0;
 	for(int i = 0; i < length; i++)
@@ -1113,10 +2893,7 @@ static void GenerateDongleData(bool isTerminal)
 	}
 }
 
-static char customName[256];
-
-
-static DWORD WINAPI SpamCustomName(LPVOID)
+static DWORD WINAPI spamCustomName(LPVOID)
 {
 	while (true)
 	{
@@ -1126,7 +2903,7 @@ static DWORD WINAPI SpamCustomName(LPVOID)
 	}
 }
 
-static DWORD WINAPI SpamMulticast(LPVOID)
+static DWORD WINAPI spamMulticast(LPVOID)
 {
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -1216,23 +2993,21 @@ static DWORD WINAPI SpamMulticast(LPVOID)
 	}
 }
 
-extern int* ffbOffset;
-extern int* ffbOffset2;
-extern int* ffbOffset3;
-extern int* ffbOffset4;
+#pragma endregion
 
-static __int64(__fastcall* g_origMileageFix)(__int64);
+#pragma region main
 
-static __int64 __fastcall MileageFix(__int64 a1)
-{
-	*(DWORD*)(a1 + 224) = mileageValue;
-	auto result = g_origMileageFix(a1);
-	mileageValue += *(DWORD*)(a1 + 228);
-	return result;
-}
-
+// Wmmt6Func([]()): InitFunction
+// Performs the initial startup tasks for 
+// maximum tune 6, including the starting 
+// of required subprocesses.
 static InitFunction Wmmt6Func([]()
 {
+#ifdef _DEBUG
+		writeLog("Game: Wangan Midnight Maximum Tune 6");
+		writeLog("Call to init function ...");
+#endif
+
 	// folder for path redirections
 	CreateDirectoryA(".\\TP", nullptr);
 
@@ -1273,9 +3048,11 @@ static InitFunction Wmmt6Func([]()
 	MH_CreateHookApi(L"hasp_windows_x64_28756.dll", "hasp_logout", Hook_hasp_logout, NULL);
 	MH_CreateHookApi(L"hasp_windows_x64_28756.dll", "hasp_login", Hook_hasp_login, NULL);
 	MH_CreateHookApi(L"WS2_32", "bind", Hook_bind, reinterpret_cast<LPVOID*>(&pbind));
-	MH_CreateHook((void*)(imageBase + 0x35AAC0), MileageFix, (void**)&g_origMileageFix);
 
 	GenerateDongleData(isTerminal);
+
+	// Prevents game from setting time, thanks pockywitch!
+	MH_CreateHookApi(L"KERNEL32", "SetSystemTime", Hook_SetSystemTime, reinterpret_cast<LPVOID*>(&pSetSystemTime));
 
 	injector::WriteMemory<uint8_t>(hook::get_pattern("0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 ? EB", 0x13), 0, true);
 
@@ -1293,27 +3070,32 @@ static InitFunction Wmmt6Func([]()
 	// First auth error skip
 	injector::WriteMemory<BYTE>(imageBase + 0x6A0077, 0xEB, true);
 	
+	// Terminal mode is on
 	if (isTerminal)
 	{
 		safeJMP(hook::get_pattern("0F B6 41 05 2C 30 3C 09 77 04 0F BE C0 C3 83 C8 FF C3"), ReturnTrue);
 	}
-	else
+	else // Terminal mode is off
 	{
-		// Comment these out to disable terminal bypass
-
-		injector::WriteMemory<WORD>(imageBase + 0x6A0C87, 0x00D1, true);		
-		injector::WriteMemory<BYTE>(imageBase + 0x20B88A, 0x90, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x20B88B, 0x90, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x20B89B, 0x90, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x20B89C, 0x90, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x20B8A1, 0x90, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x20B8A2, 0x90, true);
-
-		// spam thread
-		if (ToBool(config["General"]["TerminalEmulator"]))
+		// If the bypass terminal check switch is set
+		if (ToBool(config["General"]["BypassTerminalCheck"]))
 		{
-			CreateThread(0, 0, SpamMulticast, 0, 0, 0);
+			// Patches to bypass terminal check (No multiplayer!)
+
+			injector::WriteMemory<WORD>(imageBase + 0x6A0C87, 0x00D1, true);
+			injector::WriteMemory<BYTE>(imageBase + 0x20B88A, 0x90, true);
+			injector::WriteMemory<BYTE>(imageBase + 0x20B88B, 0x90, true);
+			injector::WriteMemory<BYTE>(imageBase + 0x20B89B, 0x90, true);
+			injector::WriteMemory<BYTE>(imageBase + 0x20B89C, 0x90, true);
+			injector::WriteMemory<BYTE>(imageBase + 0x20B8A1, 0x90, true);
+			injector::WriteMemory<BYTE>(imageBase + 0x20B8A2, 0x90, true);
 		}
+
+		// Terminal emulator doesn't work for this game lol
+		// if (ToBool(config["General"]["TerminalEmulator"]))
+		// {
+		// 	CreateThread(0, 0, spamMulticast, 0, 0, 0);
+		// }
 	}
 
 	// Enable all print
@@ -1376,17 +3158,31 @@ static InitFunction Wmmt6Func([]()
 		// Skip movies fuck you wmmt5
 		safeJMP(imageBase + 0x9A79D0, ReturnTrue);
 	}
+	
+	// Get the custom name specified in the  config file
+	std::string tempName = config["General"]["CustomName"];
 
-	std::string value = config["General"]["CustomName"];
-	if (!value.empty())
+	// If a custom name is set
+	if (!tempName.empty())
 	{
-		if (value.size() > 5)
+		// If the temp name is greater than 5
+		if (tempName.size() > 5)
 		{
+			// Zero out the custom name variable
 			memset(customName, 0, 256);
-			strcpy(customName, value.c_str());
-			CreateThread(0, 0, SpamCustomName, 0, 0, 0);
+
+			// Copy the custom name to the custom name block
+			strcpy(customName, tempName.c_str());
+
+			// Sets if the custom name should be spammed (over the nameplate)
+			if (ToBool(config["General"]["spamCustomName"]))
+			{
+				// Create the spam custom name thread
+				CreateThread(0, 0, spamCustomName, 0, 0, 0);
+			}
 		}
 
+		/*
 		injector::WriteMemory<BYTE>(imageBase + 0x10942E8, 0xFF, true);
 		injector::WriteMemory<BYTE>(imageBase + 0x10F5428, 0xFF, true);
 		injector::WriteMemory<BYTE>(imageBase + 0x12B3EB0, 0xFF, true);
@@ -1526,6 +3322,7 @@ static InitFunction Wmmt6Func([]()
 		injector::WriteMemory<BYTE>(imageBase + 0x13C4C15, 0xFF, true);
 		injector::WriteMemory<BYTE>(imageBase + 0x13C4C17, 0xFF, true);
 		injector::WriteMemory<BYTE>(imageBase + 0x13C4C19, 0xFF, true);
+		*/
 	}
 
 	ForceFullTune = (ToBool(config["Tune"]["Force Full Tune"]));
@@ -1558,48 +3355,27 @@ static InitFunction Wmmt6Func([]()
 	// Fix dongle error (can be triggered by various USB hubs, dongles
 	injector::MakeNOP(imageBase + 0x8C140F, 2, true);
 
-	// Save story stuff (only 05)
-	{
-		// skip erasing of temp card data
-		// injector::WriteMemory<uint8_t>(imageBase + 0xA54F13, 0xEB, true);
-		
-		// Skip erasing of temp card
-		// safeJMP(imageBase + 0x65ED40, ReturnTrue);
-		// safeJMP(imageBase + 0x682A00, ReturnTrue);
-		// safeJMP(imageBase + 0x68CD40, ReturnTrue);
+	// Load car and save data at the same time
+	safeJMP(imageBase + 0x6C8818, loadGame);
 
-		// safeJMP(imageBase + 0xACEA10, ReturnTrue);
-		// safeJMP(imageBase + 0x65F1F0, ReturnTrue);
-		// safeJMP(imageBase + 0x6856F0, ReturnTrue);
+	// Save progress trigger
+	injector::WriteMemory<WORD>(imageBase + 0x655154, 0xB848, true);
+	injector::WriteMemory<uintptr_t>(imageBase + 0x655154 + 2, (uintptr_t)SaveOk, true);
+	injector::WriteMemory<DWORD>(imageBase + 0x655154 + 0xA, 0x9090D0FF, true);
 
-		// Skip more
-		// safeJMP(imageBase + 0x641950, ReturnTrue);
-		// safeJMP(imageBase + 0xACDCE0, ReturnTrue);
-		// safeJMP(imageBase + 0x6B7030, ReturnTrue);
-		// safeJMP(imageBase + 0x6C73D0, ReturnTrue);
-		// safeJMP(imageBase + 0xA85F20, ReturnTrue);
-		// safeJMP(imageBase + 0x64F600, ReturnTrue);
-		// safeJMP(imageBase + 0x61BD00, ReturnTrue);
-
-		// safeJMP(imageBase + 0x6C8818, LoadWmmt5CarData);
-
-		// Load car and save data at the same time
-		safeJMP(imageBase + 0x6C8818, loadGame);
-
-		// Save progress trigger
-		injector::WriteMemory<WORD>(imageBase + 0x655154, 0xB848, true);
-		injector::WriteMemory<uintptr_t>(imageBase + 0x655154 + 2, (uintptr_t)SaveOk, true);
-		injector::WriteMemory<DWORD>(imageBase + 0x655154 + 0xA, 0x9090D0FF, true);
-
-		// Try save later!
-		injector::MakeNOP(imageBase + 0x399A56, 0x12);
-		injector::WriteMemory<WORD>(imageBase + 0x399A56, 0xB848, true);
-		injector::WriteMemory<uintptr_t>(imageBase + 0x399A56 + 2, (uintptr_t)SaveGameData, true);
-		injector::WriteMemory<DWORD>(imageBase + 0x399A60, 0x3348D0FF, true);
-		injector::WriteMemory<WORD>(imageBase + 0x399A60 + 4, 0x90C0, true);
-	}
+	// Try save later!
+	injector::MakeNOP(imageBase + 0x399A56, 0x12);
+	injector::WriteMemory<WORD>(imageBase + 0x399A56, 0xB848, true);
+	injector::WriteMemory<uintptr_t>(imageBase + 0x399A56 + 2, (uintptr_t)SaveGameData, true);
+	injector::WriteMemory<DWORD>(imageBase + 0x399A60, 0x3348D0FF, true);
+	injector::WriteMemory<WORD>(imageBase + 0x399A60 + 4, 0x90C0, true);
 
 	MH_EnableHook(MH_ALL_HOOKS);
+
+#ifdef _DEBUG
+	writeLog("Init function done.");
+#endif
 }, GameID::WMMT6);
 #endif
 #pragma optimize("", on)
+#pragma endregion
