@@ -27,7 +27,7 @@
 // and debug functions will be included in
 // the compilation
 
-#define _DEBUG
+// #define _DEBUG
 
 #pragma region packets
 

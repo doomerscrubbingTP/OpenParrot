@@ -2360,6 +2360,30 @@ static int loadSettingsData()
 			memset((void*)(settingsPtr + 0x20), 0x15, 0x1);
 		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Gold Meter") == 0)
 			memset((void*)(settingsPtr + 0x20), 0x16, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Steampunk Meter (Gold)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x17, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Steampunk Meter (Green)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x18, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Dragon Meter (Gold)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x19, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Dragon Meter (Blue)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x1A, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Holo Meter (Blue)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x1B, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Holo Meter (Orange)") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x1C, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "New Story Meter 1") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x1D, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "New Story Meter 2") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x1E, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "New Story Meter 3") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x1F, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "New Story Meter 4") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x20, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "New Story Meter 5") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x21, 0x1);
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "New Story Meter 6") == 0)
+			memset((void*)(settingsPtr + 0x20), 0x22, 0x1);
 	}
 
 	// If a non-default custom soundtrack is selected in the drop-down
@@ -2379,6 +2403,8 @@ static int loadSettingsData()
 			memset((void*)(settingsPtr + 0x28), 0x4, 0x1);
 		else if (strcmp(config["General"]["Custom Soundtrack"].c_str(), "Maximum Tune 4") == 0)
 			memset((void*)(settingsPtr + 0x28), 0x5, 0x1);
+		else if (strcmp(config["General"]["Custom Soundtrack"].c_str(), "Maximum Tune 5/DX/DX+") == 0)
+			memset((void*)(settingsPtr + 0x28), 0x6, 0x1);
 	}
 
 #ifdef _DEBUG
@@ -2903,6 +2929,9 @@ static DWORD WINAPI spamCustomName(LPVOID)
 	}
 }
 
+// MT5 Terminal, not compatible with MT6
+
+/*
 static DWORD WINAPI spamMulticast(LPVOID)
 {
 	WSADATA wsaData;
@@ -2992,6 +3021,7 @@ static DWORD WINAPI spamMulticast(LPVOID)
 		Sleep(8);
 	}
 }
+*/
 
 #pragma endregion
 
@@ -3153,36 +3183,31 @@ static InitFunction Wmmt6Func([]()
 	injector::WriteMemoryRaw(imageBase + 0x13652B8, "TP", 2, true);
 	injector::WriteMemoryRaw(imageBase + 0x1365AC8, "TP", 2, true);
 
-	if (ToBool(config["General"]["SkipMovies"]))
-	{
-		// Skip movies fuck you wmmt5
-		safeJMP(imageBase + 0x9A79D0, ReturnTrue);
-	}
-	
 	// Get the custom name specified in the  config file
 	std::string tempName = config["General"]["CustomName"];
 
 	// If a custom name is set
 	if (!tempName.empty())
 	{
+		// Zero out the custom name variable
+		memset(customName, 0, 256);
+
+		// Copy the custom name to the custom name block
+		strcpy(customName, tempName.c_str());
+
 		// If the temp name is greater than 5
 		if (tempName.size() > 5)
 		{
-			// Zero out the custom name variable
-			memset(customName, 0, 256);
-
-			// Copy the custom name to the custom name block
-			strcpy(customName, tempName.c_str());
-
 			// Sets if the custom name should be spammed (over the nameplate)
-			if (ToBool(config["General"]["spamCustomName"]))
+			if (ToBool(config["General"]["SpamCustomName"]))
 			{
 				// Create the spam custom name thread
 				CreateThread(0, 0, spamCustomName, 0, 0, 0);
 			}
 		}
 
-		/*
+		// Write the custom name (First 5 characters) to memory
+
 		injector::WriteMemory<BYTE>(imageBase + 0x10942E8, 0xFF, true);
 		injector::WriteMemory<BYTE>(imageBase + 0x10F5428, 0xFF, true);
 		injector::WriteMemory<BYTE>(imageBase + 0x12B3EB0, 0xFF, true);
@@ -3225,63 +3250,64 @@ static InitFunction Wmmt6Func([]()
 		injector::WriteMemory<BYTE>(imageBase + 0x13C4C18, 0xFF, true);
 
 		char NameChar;
-		for (int i = 0; i < value.size(); i++) {
-			NameChar = value.at(i) - 0x20;
-
+		for (int i = 0; i < tempName.size(); i++) 
+		{
+			NameChar = tempName.at(i) - 0x20;
 			switch (i)
 			{
-			case 0x00:
-				injector::WriteMemory<BYTE>(imageBase + 0x10942E8, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x10F5428, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12B3EB0, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12B75A0, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12CE688, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4BF0, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4C00, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4C10, NameChar, true);
-				break;
-			case 0x01:
-				injector::WriteMemory<BYTE>(imageBase + 0x10942EA, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x10F542A, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12B3EB2, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12B75A2, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12CE68A, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4BF2, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4C02, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4C12, NameChar, true);
-				break;
-			case 0x02:
-				injector::WriteMemory<BYTE>(imageBase + 0x10942EC, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x10F542C, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12B3EB4, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12B75A4, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12CE68C, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4BF4, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4C04, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4C14, NameChar, true);
-				break;
-			case 0x03:
-				injector::WriteMemory<BYTE>(imageBase + 0x10942EE, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x10F542E, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12B3EB6, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12B75A6, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12CE68E, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4BF6, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4C06, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4C16, NameChar, true);
-				break;
-			case 0x04:
-				injector::WriteMemory<BYTE>(imageBase + 0x10942F0, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x10F5430, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12B3EB8, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12B75A8, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x12CE690, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4BF8, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4C08, NameChar, true);
-				injector::WriteMemory<BYTE>(imageBase + 0x13C4C18, NameChar, true);
-				break;
+				case 0x00:
+					injector::WriteMemory<BYTE>(imageBase + 0x10942E8, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x10F5428, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12B3EB0, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12B75A0, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12CE688, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4BF0, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4C00, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4C10, NameChar, true);
+					break;
+				case 0x01:
+					injector::WriteMemory<BYTE>(imageBase + 0x10942EA, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x10F542A, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12B3EB2, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12B75A2, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12CE68A, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4BF2, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4C02, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4C12, NameChar, true);
+					break;
+				case 0x02:
+					injector::WriteMemory<BYTE>(imageBase + 0x10942EC, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x10F542C, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12B3EB4, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12B75A4, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12CE68C, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4BF4, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4C04, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4C14, NameChar, true);
+					break;
+				case 0x03:
+					injector::WriteMemory<BYTE>(imageBase + 0x10942EE, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x10F542E, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12B3EB6, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12B75A6, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12CE68E, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4BF6, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4C06, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4C16, NameChar, true);
+					break;
+				case 0x04:
+					injector::WriteMemory<BYTE>(imageBase + 0x10942F0, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x10F5430, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12B3EB8, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12B75A8, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x12CE690, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4BF8, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4C08, NameChar, true);
+					injector::WriteMemory<BYTE>(imageBase + 0x13C4C18, NameChar, true);
+					break;
 			}
 		}
+
 		injector::WriteMemory<BYTE>(imageBase + 0x10942E9, 0xFF, true);
 		injector::WriteMemory<BYTE>(imageBase + 0x10942EB, 0xFF, true);
 		injector::WriteMemory<BYTE>(imageBase + 0x10942ED, 0xFF, true);
@@ -3322,7 +3348,6 @@ static InitFunction Wmmt6Func([]()
 		injector::WriteMemory<BYTE>(imageBase + 0x13C4C15, 0xFF, true);
 		injector::WriteMemory<BYTE>(imageBase + 0x13C4C17, 0xFF, true);
 		injector::WriteMemory<BYTE>(imageBase + 0x13C4C19, 0xFF, true);
-		*/
 	}
 
 	ForceFullTune = (ToBool(config["Tune"]["Force Full Tune"]));
