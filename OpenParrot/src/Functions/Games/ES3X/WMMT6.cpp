@@ -1216,9 +1216,6 @@ static int loadCustomSticker()
 				// Write the string end line characters to the second row of the pointer
 				memcpy((void*)(stickerPtr + 0x10), stringTerminator, STICKER_LENGTH);
 
-				// Close the file
-				fclose(file);
-
 				// Success
 				status = 0;
 			}
@@ -1227,6 +1224,9 @@ static int loadCustomSticker()
 				// Incorrect file size 
 				status = 2;
 			}
+
+			// Close the file
+			fclose(file);
 		}
 	}
 	else // No files exist
@@ -1391,9 +1391,6 @@ static int loadCustomName()
 				// Write the new title to the string value
 				memcpy((void*)namePtr, name, NAME_LENGTH);
 
-				// Close the file
-				fclose(file);
-
 				// Success
 				status = 0;
 			}
@@ -1402,6 +1399,9 @@ static int loadCustomName()
 				// Incorrect file size
 				status = 2;
 			}
+
+			// Close the file
+			fclose(file);
 		}
 	}
 	else // No files exist
@@ -1748,9 +1748,6 @@ static int loadCustomTitle()
 				// Write the new title to the string value
 				memcpy((void*)titlePtr, carTitle, TITLE_LENGTH);
 
-				// Close the file
-				fclose(file);
-
 				// Success
 				status = 0;
 			}
@@ -1759,6 +1756,9 @@ static int loadCustomTitle()
 				// Incorrect file size 
 				status = 2;
 			}
+
+			// Close the file
+			fclose(file);
 		}
 	}
 
@@ -2080,7 +2080,7 @@ static int loadCarFile(char* filename)
 			memcpy((void*)(carSAVE_OFFSET + 0x98), carData + 0x98, 8); // Window Sticker ID (0x98)
 
 			// memcpy((void*)(carSAVE_OFFSET + 0xA0), carData + 0xA0, 8); // Crash (Pointer)
-			// memcpy((void*)(carSAVE_OFFSET + 0xA8), carData + 0xA8, 8); // Crash (Pointer)
+			// memcpy((void*)(carSAVE_OFFSET + 0xA8), carData + 0xA8, 8); // Last Played Date (0xA8)
 			memcpy((void*)(carSAVE_OFFSET + 0xB0), carData + 0xB0, 8); // ??
 			// memcpy((void*)(carSAVE_OFFSET + 0xB8), carData + 0xB8, 8); // Crash (Pointer)
 
@@ -2372,17 +2372,27 @@ static int loadSettingsData()
 			memset((void*)(settingsPtr + 0x20), 0x1B, 0x1);
 		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Holo Meter (Orange)") == 0)
 			memset((void*)(settingsPtr + 0x20), 0x1C, 0x1);
-		else if (strcmp(config["General"]["Custom Meter"].c_str(), "New Story Meter 1") == 0)
+
+		/*
+		        <string>PRO Meter</string>
+        <string>Classic Meter</string>
+        <string>Digital Blue Meter</string>
+        <string>High-End Red Meter</string>
+        <string>Digital Yellow Meter</string>
+        <string>High-End Yellow Meter</string>
+		*/
+
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "PRO Meter") == 0)
 			memset((void*)(settingsPtr + 0x20), 0x1D, 0x1);
-		else if (strcmp(config["General"]["Custom Meter"].c_str(), "New Story Meter 2") == 0)
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Classic Meter") == 0)
 			memset((void*)(settingsPtr + 0x20), 0x1E, 0x1);
-		else if (strcmp(config["General"]["Custom Meter"].c_str(), "New Story Meter 3") == 0)
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Digital Blue Meter") == 0)
 			memset((void*)(settingsPtr + 0x20), 0x1F, 0x1);
-		else if (strcmp(config["General"]["Custom Meter"].c_str(), "New Story Meter 4") == 0)
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "High-End Red Meter") == 0)
 			memset((void*)(settingsPtr + 0x20), 0x20, 0x1);
-		else if (strcmp(config["General"]["Custom Meter"].c_str(), "New Story Meter 5") == 0)
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "Digital Yellow Meter") == 0)
 			memset((void*)(settingsPtr + 0x20), 0x21, 0x1);
-		else if (strcmp(config["General"]["Custom Meter"].c_str(), "New Story Meter 6") == 0)
+		else if (strcmp(config["General"]["Custom Meter"].c_str(), "High-End Yellow Meter") == 0)
 			memset((void*)(settingsPtr + 0x20), 0x22, 0x1);
 	}
 
