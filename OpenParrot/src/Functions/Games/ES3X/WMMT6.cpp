@@ -1,5 +1,7 @@
 #pragma region imports
 
+#define NOMINMAX
+
 #include <StdInc.h>
 #include "Utility/InitFunction.h"
 #include "Functions/Global.h"
@@ -27,7 +29,7 @@
 // and debug functions will be included in
 // the compilation
 
-#define _DEBUG
+// #define _DEBUG
 
 #pragma region packets
 
@@ -268,7 +270,7 @@ static uint8_t terminalPackage6_Coin[139] = {
 #define CAR_DATA_SIZE 0xE0
 
 // GT Wing load/save size
-#define GTWING_DATA_SIZE 0x30
+#define GTWING_DATA_SIZE 0x1C
 
 // String File Lengths
 
@@ -333,8 +335,6 @@ static uint8_t stringTerminator[0x10] = {
 	0x0F, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 	0x0F, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
 };
-
-// No idea if this will change or not lol
 
 // Car region codes
 static const char* regionCodes[REGION_COUNT] = {
@@ -790,6 +790,53 @@ static void watchMemory(char* filename, uintptr_t memory, size_t size, int delay
 	CreateThread(0, 0, watchMemoryThread, 0, 0, 0);
 
 	writeLog("watchMemory done.");
+}
+
+// writeFullWidthChar(c: Char, target: uintptr_t)
+// Given a standard character, 
+static int writeFullWidthChar(char c, uintptr_t target)
+{
+#ifdef _DEBUG
+	writeLog("Call to writeFullWidthChar...");
+#endif
+
+	// Status code (default: Not written)
+	int status = 1;
+
+	// If the char is within the acceptable range
+	if (c > ' ' && c < 127)
+	{
+		// If the character is later than '-'
+		if (c > '_')
+		{
+			// Set the memory address to the full-width char
+			memset((void*)(target + 0x0), 0xEF, 0x1);
+			memset((void*)(target + 0x1), 0xBD, 0x1);
+			memset((void*)(target + 0x2), 0x20 + c, 0x1);
+		}
+		else // Character is earlier than '-'
+		{
+			// Set the memory address to the full-width char
+			memset((void*)(target + 0x0), 0xEF, 0x1);
+			memset((void*)(target + 0x1), 0xBC, 0x1);
+			memset((void*)(target + 0x2), 0x60 + c, 0x1);
+		}
+
+		// Success status
+		status = 0;
+	}
+	else // Character is out of range
+	{
+		// Write the standard char to the text
+		memset((void*)(target + 0x00), c, 0x1);
+	}
+
+#ifdef _DEBUG
+	status ? writeLog("writeFullWidthChar success.") : writeLog("writeFullWidthChar out of range.");
+#endif
+
+	// Return status code
+	return status;
 }
 
 #endif
@@ -1261,6 +1308,85 @@ static int loadCustomSticker()
 
 #pragma region custom_name
 
+// spamCustomNameThread(LPVOID): DWORD WINAPI
+// Starts a thread which spams the 
+static DWORD WINAPI spamCustomNameThread(LPVOID)
+{
+	// Pointer to the nameplate text memory address
+	void* value = (void*)(imageBase + 0x1E19EE0);
+
+	// Infinite loop
+	while (true)
+	{
+		// Copy the custom name into the nameplate text
+		memcpy(value, customName, strlen(customName) + 1);
+
+		// Wait 50 milliseconds 
+		Sleep(50);
+	}
+}
+
+// spamCustomName(playerName: String): Int
+// Given a string, starts a thread which spams that 
+// string on the player's nameplate during runtime.
+static int spamCustomName(std::string playerName) 
+{
+#ifdef _DEBUG
+	writeLog("Call to spamCustomName...");
+#endif
+
+	// Status code (default: Not started)
+	int status = 1;
+
+	// Clear the custom name array
+	memset(customName, 0, PROFILE_LENGTH);
+
+	// If a custom name is set
+	if (!playerName.empty())
+	{
+		// Copy the custom name to the custom name array
+		strcpy(customName, playerName.c_str());
+
+		// If the temp name is greater than 5
+		if (playerName.length() > 5)
+		{
+			// Create the spam custom name thread
+			CreateThread(0, 0, spamCustomNameThread, 0, 0, 0);
+
+			// Status code = 0 (thread started)
+			status = 0;
+		}
+
+		// Status code = 2 (thread not started - too short)
+		status = 2;
+	}
+
+	// Status code = 1 (thread not started - no text)
+
+#ifdef _DEBUG
+	switch (status)
+	{
+	// Thread Started
+	case 0: 
+		writeLog("spamCustomName thread started!");
+		break;
+
+	// Thread Not Started (No Text)
+	case 1: 
+		writeLog("spamCustomName thread not started! No text!");
+		break;
+
+	// Thread Not Started (Too Short)
+	case 2: 
+		writeLog("spamCustomName thread not started! Text too short!");
+		break;
+	}
+#endif
+
+	// Return status code
+	return status;
+}
+
 // saveCustomName(filename: char*): Int
 // Given a filename, saves the default custom name
 // attribute to the file. Returns a status code 
@@ -1322,20 +1448,34 @@ static int loadCustomName()
 	// Address where car save data starts
 	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
 
-	// _DEBUG: Address where the player name (might be) saved
+	// _DEBUG: Address where the player name is saved
 	uintptr_t namePtr = *(uintptr_t*)(carSaveBase + CAR_NAME_OFFSET);
-
-	// Success status (default: Failed to open file)
-	int status = 1;
 
 	// File exists status
 	bool file_exists = true;
 
+	// Success status (default: Failed to open file)
+	int status = 1;
+
+	// Save sample custom name file
+	saveCustomName();
+
+	// Custom Name Specific Stuff
+
+	// Get the custom name specified in the  config file
+	std::string playerName = config["General"]["CustomName"];
+
+	// Start the spam custom name thread
+	spamCustomName(playerName);
+
+	// Clear the default name pointer
+	memset((void*)namePtr, 0x0, NAME_LENGTH);
+
+	// Test for a car-specific name file
+
 	// Path to the file
 	char path[FILENAME_MAX];
 	memset(path, 0x0, FILENAME_MAX);
-
-	// Test for a car-specific name file
 
 	// Get the path to the car-specific file
 	sprintf(path, "%s\\%08X.name", carPath, selectedCarCode);
@@ -1385,9 +1525,6 @@ static int loadCustomName()
 				// Read the string content from the file
 				fread(name, 0x1, NAME_LENGTH, file);
 
-				// Empty the existing title content
-				memset((void*)namePtr, 0x0, NAME_LENGTH);
-
 				// Write the new title to the string value
 				memcpy((void*)namePtr, name, NAME_LENGTH);
 
@@ -1406,8 +1543,15 @@ static int loadCustomName()
 	}
 	else // No files exist
 	{
-		// Save sample custom name file
-		saveCustomName();
+		// Get the number of characters to write (max. 5)
+		int length = std::min((int)(playerName.length()), 5);
+
+		// Loop over all of the characters in the tekno player name
+		for (int i = 0; i < length; i++)
+		{
+			// Write the full width character into the pointer
+			writeFullWidthChar(playerName.at(i), namePtr + (i * 3));
+		}
 	}
 
 	// Copy the name of the car into the car name variable
@@ -1472,7 +1616,7 @@ static int saveCustomGTWing()
 	if (!FileExists(path))
 	{
 		// Success status for the custom sticker dump
-		status = dumpMemory(path, gtWingPtr, GTWING_DATA_SIZE);
+		status = dumpMemory(path, gtWingPtr + 0x14, GTWING_DATA_SIZE);
 	}
 
 #ifdef _DEBUG
@@ -1564,8 +1708,7 @@ static int loadCustomGTWing()
 				fread(gtWingData, 0x1, GTWING_DATA_SIZE, file);
 
 				// Memcpys for the gt wing data will go here :)
-				memcpy((void*)(gtWingPtr + 0x10), (void*)(gtWingData + 0x10), 0x10); // Entire of row 2
-				memcpy((void*)(gtWingPtr + 0x20), (void*)(gtWingData + 0x20), 0x10); // Entire of row 3
+				memcpy((void*)(gtWingPtr + 0x14), (void*)(gtWingData), GTWING_DATA_SIZE); // Entire data
 
 				// Close the file
 				fclose(file);
@@ -2008,6 +2151,85 @@ static int loadCustomRegion()
 
 #pragma region car_main
 
+// verifyCarData(void): Int
+// Compares the data in the loaded car data to the 
+// data which is to be saved, to ensure that the new data
+// has not been corrupted. This has been implemented as 
+// a fix for a bug which was overwriting save files with
+// junk data after entering the test menu during versus mode.
+static int verifyCarData()
+{
+#ifdef _DEBUG
+	writeLog("Call to verifyCarData...");
+#endif
+
+	// Address where player save data starts
+	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
+
+	// Address where car save data starts
+	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
+
+	// Array which stores the offsets which should
+	// be loaded and their purpose for car data.
+	uint8_t offsets[] = {
+		0x28, 0x34, 0x38, 0x3C, 
+		0x40, 0x44, 0x48, 0x4C, 
+		0x58, 0x5C, 0x60, 0x64, 
+		0x68, 0x6C, 0x70, 0x74, 
+		0x80, 0x84, 0x90, 0x98
+	};
+
+	// Function validation status (default: invalid)
+	bool status = 1;
+
+	// Get the number of items in the offsets list
+	uint32_t count = sizeof(offsets) / sizeof(*offsets);
+
+	// Get the total value of the element(s)
+	// If this is greater than zero, the car will be saved
+	// If it is less than zero, it will not be saved
+	int total = 0;
+
+	// Loop over all of the offsets
+	for (int i = 0; i < count; i++)
+	{
+		// Get the offset from the list
+		uint8_t offset = offsets[i];
+
+		// Get the current value in memory for the offset
+		uint32_t value = injector::ReadMemory<uint32_t>(carSaveBase + offset);
+
+		// Add the value to the total
+		total += value;
+	}
+
+	// If the total is greater than zero
+	if (total > 0)
+	{
+		// Car has not been zeroed, save ok
+		status = 0;
+	}
+	else // Total is not greater than zero
+	{
+		// Car has been zeroed, save not ok
+
+		// In the exceptional circumstance that
+		// a car could have this result genuinely, 
+		// there would be no consequences to not 
+		// saving its data anyway (as there is no 
+		// relevant data to save).
+
+		// Status remains 1
+	}
+
+#ifdef _DEBUG
+	status ? writeLog("verifyCarData validation failed.") : writeLog("verifyCarData validation success.");
+#endif
+
+	// Return status code
+	return status;
+}
+
 // loadCarFile(filename: char*): Int
 // Given a filename, loads the data from
 // the car file into memory. 
@@ -2077,7 +2299,7 @@ static int loadCarFile(char* filename)
 			memcpy((void*)(carSAVE_OFFSET + 0x80), carData + 0x80, 8); // Handling (0x80), Rank (0x84)
 			// memcpy((void*)(carSAVE_OFFSET + 0x88), carData + 0x88, 8); // Crash (Pointer)
 			memcpy((void*)(carSAVE_OFFSET + 0x90), carData + 0x90, 8); // Window Sticker Switch (0x90)
-			memcpy((void*)(carSAVE_OFFSET + 0x98), carData + 0x98, 8); // Window Sticker ID (0x98)
+			memcpy((void*)(carSAVE_OFFSET + 0x98), carData + 0x98, 8); // Window Sticker ID (0x98), Window Sticker Font (0x9C)
 
 			// memcpy((void*)(carSAVE_OFFSET + 0xA0), carData + 0xA0, 8); // Crash (Pointer)
 			// memcpy((void*)(carSAVE_OFFSET + 0xA8), carData + 0xA8, 8); // Last Played Date (0xA8)
@@ -2187,7 +2409,7 @@ static int loadCarData()
 	loadCustomRegion();
 
 	// If the force full tune switch is set
-	if (ToBool(config["Tune"]["Force Full Tune"]))
+	if (ToBool(config["Save"]["Force Full Tune"]))
 	{
 		// Set the car to be fully tuned / force neons
 		setCarTuneNeons();
@@ -2501,6 +2723,8 @@ static int loadStoryData()
 	// Story save data offset
 	uintptr_t saveStoryBase = *(uintptr_t*)(savePtr + STORY_OFFSET);
 
+	watchMemory("story_watch", saveStoryBase, 0x2000, 0x30);
+
 	// Open the openprogress file with read privileges	
 	FILE* file = fopen(path, "rb");
 
@@ -2529,15 +2753,40 @@ static int loadStoryData()
 
 			// (Mostly) discovered story data
 
-			// memcpy((void*)(saveStoryBase + 0xE0), saveData + 0xE0, 0x8); // ??
-			memcpy((void*)(saveStoryBase + 0xE8), storyData + 0xE8, 0x8); // Total Wins (0xE8)
-			memcpy((void*)(saveStoryBase + 0xF0), storyData + 0xF0, 0x8); // Chapter Progress (0xF4) (Bitmask)
-			memcpy((void*)(saveStoryBase + 0xF8), storyData + 0xF8, 0x8); // Current Chapter (0xF8)
-			memcpy((void*)(saveStoryBase + 0x100), storyData + 0x100, 0x8); // Win Streak (0x108)
-			// memcpy((void*)(saveStoryBase + 0x108), storyData + 0x108, 0x8); // ??
-			// memcpy((void*)(saveStoryBase + 0x110), storyData + 0x110, 0x8); // ??
-			memcpy((void*)(saveStoryBase + 0x118), storyData + 0x118, 0x8); // Locked Chapters (0x118) (Bitmask)
-			// memcpy((void*)(saveStoryBase + 0x120), storyData + 0x120, 0x8); // ??
+			//	== StoryResult proto == 
+
+			//	0xE8 - st_play_count
+			//	0xEC (??) - st_played_story
+			//	0xF0 (??) - tuning_point
+			//	0xF4 - st_clear_bits
+			//	0xF8 (??) - st_clear_div_count
+			//	0xFC - st_clear_count
+			//	0x100 - st_lose_bits
+			//	0x108 - st_consecutive_wins
+			//	0x10C (??) - st_completed_100_episodes
+			//	0x110 - is_insurance_used
+
+			//	== outside StoryResult proto ==
+
+			// 0x114 (??) - st_verify_bits
+			// 0x118 (??) - st_locked_bits
+
+			memcpy((void*)(saveStoryBase + 0xE8), storyData + 0xE8, 0x4); // st_play_count
+			memcpy((void*)(saveStoryBase + 0xEC), storyData + 0xEC, 0x4); // st_played_story
+
+			memcpy((void*)(saveStoryBase + 0xF0), storyData + 0xF0, 0x4); // tuning_point
+			memcpy((void*)(saveStoryBase + 0xF4), storyData + 0xF4, 0x4); // st_clear_bits
+			memcpy((void*)(saveStoryBase + 0xF8), storyData + 0xF8, 0x4); // st_clear_div_count
+			memcpy((void*)(saveStoryBase + 0xFC), storyData + 0xFC, 0x4); // st_clear_count
+
+			memcpy((void*)(saveStoryBase + 0x100), storyData + 0x100, 0x4); // st_lose_bits
+			// memcpy((void*)(saveStoryBase + 0x104), storyData + 0x104, 0x4); // unused
+			memcpy((void*)(saveStoryBase + 0x108), storyData + 0x108, 0x4); // st_consecutive_wins
+			memcpy((void*)(saveStoryBase + 0x10C), storyData + 0x10C, 0x4); // st_completed_100_episodes
+
+			memcpy((void*)(saveStoryBase + 0x110), storyData + 0x110, 0x4); // is_insurance_used
+			memcpy((void*)(saveStoryBase + 0x114), storyData + 0x114, 0x4); // st_verify_bits
+			memcpy((void*)(saveStoryBase + 0x118), storyData + 0x118, 0x4); // st_locked_bits
 
 			// Success code
 			status = 0;
@@ -2555,20 +2804,90 @@ static int loadStoryData()
 	{
 		// Feature is broken until I figure out how the story bitmask works better
 
-		/*
-		// If the start with 100 stories option is set
-		if (ToBool(config["Story"]["Start at 100 Stories"]))
+		// If a non-default custom meter is selected in the drop-down
+		if (strcmp(config["Story"]["Starting Story"].c_str(), "Default") != 0)
 		{
-			// Set total wins to 100
-			memset((void*)(saveStoryBase + 0xE8), 0x64, 0x1);
+			// Start at 60 stories (end of mt4/5 story)
+			if (strcmp(config["Story"]["Starting Story"].c_str(), "60 Stories") == 0)
+			{
+				// Set played games to 60 (lossless win streak)
+				memset((void*)(saveStoryBase + 0xE8), 0x3C, 0x1);
 
-			// Set win streak to 100
-			memset((void*)(saveStoryBase + 0x100), 0x64, 0x1);
+				// Set last played level to 59 (zero indexed, means level 60)
+				memset((void*)(saveStoryBase + 0xEC), 0x3B, 0x1);
 
-			// Set the current chapter to 5 (5 Chapters cleared)
-			memset((void*)(saveStoryBase + 0xF8), 0x5, 0x1);
+				// Set tuning points level to 60 (Doesn't matter afaik, but worth setting??)
+				memset((void*)(saveStoryBase + 0xF0), 0x3C, 0x1);
+
+				// Set current story loop value (3 = up to 4th loop)
+				memset((void*)(saveStoryBase + 0xF8), 0x3, 0x1);
+
+				// Set completed stories count to 60 (Not sure if this matters)
+				memset((void*)(saveStoryBase + 0xFC), 0x3C, 0x1);
+
+				// Set the consecutive wins value to 60 (Unbroken win streak)
+				memset((void*)(saveStoryBase + 0x108), 0x3C, 0x1);
+
+				// Locked Chapters Bitmask
+				uint8_t lockedBits[0x4] = { 0xF0, 0xFF, 0x0F, 0x00 };
+				memcpy((void*)(saveStoryBase + 0x118), (void*)lockedBits, 0x4);
+			}
+			
+			// Start at 80 stories (fully tuned car)
+			else if (strcmp(config["Story"]["Starting Story"].c_str(), "80 Stories") == 0)
+			{
+				// Set played games to 60 (lossless win streak)
+				memset((void*)(saveStoryBase + 0xE8), 0x50, 0x1);
+
+				// Set last played level to 59 (zero indexed, means level 60)
+				memset((void*)(saveStoryBase + 0xEC), 0x4F, 0x1);
+
+				// Set tuning points level to 60 (Doesn't matter afaik, but worth setting??)
+				memset((void*)(saveStoryBase + 0xF0), 0x50, 0x1);
+
+				// Set current story loop value (4 = up to 5th loop)
+				memset((void*)(saveStoryBase + 0xF8), 0x4, 0x1);
+
+				// Set completed stories count to 60 (Not sure if this matters)
+				memset((void*)(saveStoryBase + 0xFC), 0x50, 0x1);
+
+				// Set the consecutive wins value to 60 (Unbroken win streak)
+				memset((void*)(saveStoryBase + 0x108), 0x50, 0x1);
+
+				// Locked Chapters Bitmask
+				uint8_t lockedBits[0x4] = { 0xF0, 0xFF, 0x0F, 0x00 };
+				memcpy((void*)(saveStoryBase + 0x118), (void*)lockedBits, 0x4);
+			}
+
+			// Start at 100 stories (start of loop 2)
+			else if (strcmp(config["Story"]["Starting Story"].c_str(), "100 Stories (Second Loop)") == 0)
+			{
+				// Set played games to 100 (lossless win streak)
+				memset((void*)(saveStoryBase + 0xE8), 0x64, 0x1);
+
+				// Set last played level to 99 (zero indexed, means level 60)
+				memset((void*)(saveStoryBase + 0xEC), 0x63, 0x1);
+
+				// Set tuning points level to 100 (Doesn't matter afaik, but worth setting??)
+				memset((void*)(saveStoryBase + 0xF0), 0x64, 0x1);
+
+				// Set current story loop value (5 = 2nd story loop)
+				memset((void*)(saveStoryBase + 0xF8), 0x5, 0x1);
+
+				// Set completed stories count to 100 (Not sure if this matters)
+				memset((void*)(saveStoryBase + 0xFC), 0x64, 0x1);
+
+				// Set the consecutive wins value to 100 (Unbroken win streak)
+				memset((void*)(saveStoryBase + 0x108), 0x64, 0x1);
+
+				// Set '100 stories completed' to true
+				memset((void*)(saveStoryBase + 0x10C), 0x1, 0x1);
+
+				// Chapter 5 locked, Chapters 10, 15 locked, Chapter 20 locked
+				uint8_t lockedBits[0x4] = { 0x10, 0x42, 0x08, 0x0 };
+				memcpy((void*)(saveStoryBase + 0x118), (void*)lockedBits, 0x4);
+			}
 		}
-		*/
 	}
 
 #ifdef _DEBUG
@@ -2738,7 +3057,7 @@ static int SaveGameData()
 	int status = 1;
 
 	// Saving is disabled
-	if (saveOk)
+	if (saveOk && (verifyCarData() == 0))
 	{
 		// Ensure the directory exists
 		std::filesystem::create_directories(savePath);
@@ -2926,16 +3245,6 @@ static void GenerateDongleData(bool isTerminal)
 		memcpy(hasp_buffer + 0xD00, "280813990002", 12);
 		hasp_buffer[0xD3E] = GenerateChecksum(hasp_buffer, 0xD00, 62);
 		hasp_buffer[0xD3F] = hasp_buffer[0xD3E] ^ 0xFF;
-	}
-}
-
-static DWORD WINAPI spamCustomName(LPVOID)
-{
-	while (true)
-	{
-		Sleep(50);
-		void* value = (void*)(imageBase + 0x1E19EE0);
-		memcpy(value, customName, strlen(customName) + 1);
 	}
 }
 
@@ -3192,173 +3501,6 @@ static InitFunction Wmmt6Func([]()
 	injector::WriteMemoryRaw(imageBase + 0x1401DDC, "TP", 2, true); // F:
 	injector::WriteMemoryRaw(imageBase + 0x13652B8, "TP", 2, true);
 	injector::WriteMemoryRaw(imageBase + 0x1365AC8, "TP", 2, true);
-
-	// Get the custom name specified in the  config file
-	std::string tempName = config["General"]["CustomName"];
-
-	// If a custom name is set
-	if (!tempName.empty())
-	{
-		// Zero out the custom name variable
-		memset(customName, 0, 256);
-
-		// Copy the custom name to the custom name block
-		strcpy(customName, tempName.c_str());
-
-		// If the temp name is greater than 5
-		if (tempName.size() > 5)
-		{
-			// Sets if the custom name should be spammed (over the nameplate)
-			if (ToBool(config["General"]["SpamCustomName"]))
-			{
-				// Create the spam custom name thread
-				CreateThread(0, 0, spamCustomName, 0, 0, 0);
-			}
-		}
-
-		// Write the custom name (First 5 characters) to memory
-
-		injector::WriteMemory<BYTE>(imageBase + 0x10942E8, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10F5428, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B3EB0, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B75A0, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12CE688, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4BF0, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C00, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C10, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10942EA, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10F542A, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B3EB2, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B75A2, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12CE68A, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4BF2, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C02, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C12, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10942EC, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10F542C, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B3EB4, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B75A4, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12CE68C, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4BF4, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C04, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C14, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10942EE, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10F542E, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B3EB6, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B75A6, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12CE68E, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4BF6, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C06, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C16, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10942F0, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10F5430, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B3EB8, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B75A8, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12CE690, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4BF8, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C08, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C18, 0xFF, true);
-
-		char NameChar;
-		for (int i = 0; i < tempName.size(); i++) 
-		{
-			NameChar = tempName.at(i) - 0x20;
-			switch (i)
-			{
-				case 0x00:
-					injector::WriteMemory<BYTE>(imageBase + 0x10942E8, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x10F5428, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12B3EB0, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12B75A0, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12CE688, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4BF0, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4C00, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4C10, NameChar, true);
-					break;
-				case 0x01:
-					injector::WriteMemory<BYTE>(imageBase + 0x10942EA, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x10F542A, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12B3EB2, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12B75A2, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12CE68A, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4BF2, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4C02, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4C12, NameChar, true);
-					break;
-				case 0x02:
-					injector::WriteMemory<BYTE>(imageBase + 0x10942EC, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x10F542C, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12B3EB4, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12B75A4, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12CE68C, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4BF4, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4C04, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4C14, NameChar, true);
-					break;
-				case 0x03:
-					injector::WriteMemory<BYTE>(imageBase + 0x10942EE, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x10F542E, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12B3EB6, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12B75A6, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12CE68E, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4BF6, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4C06, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4C16, NameChar, true);
-					break;
-				case 0x04:
-					injector::WriteMemory<BYTE>(imageBase + 0x10942F0, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x10F5430, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12B3EB8, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12B75A8, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x12CE690, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4BF8, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4C08, NameChar, true);
-					injector::WriteMemory<BYTE>(imageBase + 0x13C4C18, NameChar, true);
-					break;
-			}
-		}
-
-		injector::WriteMemory<BYTE>(imageBase + 0x10942E9, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10942EB, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10942ED, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10942EF, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10942F1, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10F5429, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10F542B, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10F542D, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10F542F, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x10F5431, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B3EB1, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B3EB3, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B3EB5, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B3EB7, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B3EB9, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B75A1, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B75A3, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B75A5, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B75A7, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12B75A9, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12CE689, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12CE68B, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12CE68D, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12CE68F, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x12CE691, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4BF1, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4BF3, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4BF5, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4BF7, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4BF9, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C01, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C03, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C05, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C07, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C09, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C11, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C13, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C15, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C17, 0xFF, true);
-		injector::WriteMemory<BYTE>(imageBase + 0x13C4C19, 0xFF, true);
-	}
 
 	ForceFullTune = (ToBool(config["Tune"]["Force Full Tune"]));
 	ForceNeon = (ToBool(config["Tune"]["Force Neon"]));

@@ -1,5 +1,7 @@
 #pragma region imports
 
+#define NOMINMAX
+
 #include <StdInc.h>
 #include "Utility/InitFunction.h"
 #include "Functions/Global.h"
@@ -27,7 +29,7 @@
 // and debug functions will be included in
 // the compilation
 
-#define _DEBUG
+// #define _DEBUG
 
 #pragma region packets
 
@@ -375,10 +377,10 @@ uint8_t dxpterminalPackage6_Event2P[139] = {
 #define CAR_DATA_SIZE 0xFF
 
 // GT Wing load/save size
-#define GTWING_DATA_SIZE 0x30
+#define GTWING_DATA_SIZE 0x1C
 
 // Car mini sticker load/save size
-#define MINI_STICKER_DATA_SIZE 0xA4
+#define MINI_STICKER_DATA_SIZE 0x50
 
 // String File Lengths
 
@@ -587,6 +589,7 @@ static tm getCurrentTime()
 	// Return the time object
 	return time;
 }
+
 #pragma endregion
 
 #pragma region utility
@@ -842,6 +845,53 @@ static void watchMemory(char* filename, uintptr_t memory, size_t size, int delay
 	writeLog("watchMemory done.");
 }
 #endif
+
+// writeFullWidthChar(c: Char, target: uintptr_t)
+// Given a standard character, 
+static int writeFullWidthChar(char c, uintptr_t target)
+{
+#ifdef _DEBUG
+	writeLog("Call to writeFullWidthChar...");
+#endif
+
+	// Status code (default: Not written)
+	int status = 1;
+
+	// If the char is within the acceptable range
+	if (c > ' ' && c < 127)
+	{
+		// If the character is later than '-'
+		if (c > '_')
+		{
+			// Set the memory address to the full-width char
+			memset((void*)(target + 0x0), 0xEF, 0x1);
+			memset((void*)(target + 0x1), 0xBD, 0x1);
+			memset((void*)(target + 0x2), 0x20 + c, 0x1);
+		}
+		else // Character is earlier than '-'
+		{
+			// Set the memory address to the full-width char
+			memset((void*)(target + 0x0), 0xEF, 0x1);
+			memset((void*)(target + 0x1), 0xBC, 0x1);
+			memset((void*)(target + 0x2), 0x60 + c, 0x1);
+		}
+
+		// Success status
+		status = 0;
+	}
+	else // Character is out of range
+	{
+		// Write the standard char to the text
+		memset((void*)(target + 0x00), c, 0x1);
+	}
+
+#ifdef _DEBUG
+	status ? writeLog("writeFullWidthChar success.") : writeLog("writeFullWidthChar out of range.");
+#endif
+
+	// Return status code
+	return status;
+}
 
 #pragma endregion
 
@@ -1372,6 +1422,85 @@ static int loadCustomSticker()
 
 #pragma region custom_name
 
+// spamCustomNameThread(LPVOID): DWORD WINAPI
+// Starts a thread which spams the 
+static DWORD WINAPI spamCustomNameThread(LPVOID)
+{
+	// Pointer to the nameplate text memory address
+	void* value = (void*)(imageBase + 0x1E19EE0);
+
+	// Infinite loop
+	while (true)
+	{
+		// Copy the custom name into the nameplate text
+		memcpy(value, customName, strlen(customName) + 1);
+
+		// Wait 50 milliseconds 
+		Sleep(50);
+	}
+}
+
+// spamCustomName(playerName: String): Int
+// Given a string, starts a thread which spams that 
+// string on the player's nameplate during runtime.
+static int spamCustomName(std::string playerName)
+{
+#ifdef _DEBUG
+	writeLog("Call to spamCustomName...");
+#endif
+
+	// Status code (default: Not started)
+	int status = 1;
+
+	// Clear the custom name array
+	memset(customName, 0, PROFILE_LENGTH);
+
+	// If a custom name is set
+	if (!playerName.empty())
+	{
+		// Copy the custom name to the custom name array
+		strcpy(customName, playerName.c_str());
+
+		// If the temp name is greater than 5
+		if (playerName.length() > 5)
+		{
+			// Create the spam custom name thread
+			CreateThread(0, 0, spamCustomNameThread, 0, 0, 0);
+
+			// Status code = 0 (thread started)
+			status = 0;
+		}
+
+		// Status code = 2 (thread not started - too short)
+		status = 2;
+	}
+
+	// Status code = 1 (thread not started - no text)
+
+#ifdef _DEBUG
+	switch (status)
+	{
+		// Thread Started
+	case 0:
+		writeLog("spamCustomName thread started!");
+		break;
+
+		// Thread Not Started (No Text)
+	case 1:
+		writeLog("spamCustomName thread not started! No text!");
+		break;
+
+		// Thread Not Started (Too Short)
+	case 2:
+		writeLog("spamCustomName thread not started! Text too short!");
+		break;
+	}
+#endif
+
+	// Return status code
+	return status;
+}
+
 // saveCustomName(filename: char*): Int
 // Given a filename, saves the default custom name
 // attribute to the file. Returns a status code 
@@ -1436,17 +1565,31 @@ static int loadCustomName()
 	// _DEBUG: Address where the player name (might be) saved
 	uintptr_t namePtr = *(uintptr_t*)(carSaveBase + 0x20);
 
+	// File exists status
+	bool file_exists = true;
+
 	// Success status (default: Failed to open file)
 	int status = 1;
 
-	// File exists status
-	bool file_exists = true;
+	// Save sample custom name file
+	saveCustomName();
+
+	// Custom Name Specific Stuff
+
+	// Get the custom name specified in the  config file
+	std::string playerName = config["General"]["CustomName"];
+
+	// Start the spam custom name thread
+	spamCustomName(playerName);
+
+	// Clear the default name pointer
+	memset((void*)namePtr, 0x0, NAME_LENGTH);
+
+	// Test for a car-specific name file
 
 	// Path to the file
 	char path[FILENAME_MAX];
 	memset(path, 0x0, FILENAME_MAX);
-
-	// Test for a car-specific name file
 
 	// Get the path to the car-specific file
 	sprintf(path, "%s\\%08X.name", carPath, selectedCarCode);
@@ -1496,14 +1639,8 @@ static int loadCustomName()
 				// Read the string content from the file
 				fread(name, 0x1, NAME_LENGTH, file);
 
-				// Empty the existing title content
-				memset((void*)namePtr, 0x0, NAME_LENGTH);
-
 				// Write the new title to the string value
 				memcpy((void*)namePtr, name, NAME_LENGTH);
-
-				// Close the file
-				fclose(file);
 
 				// Success
 				status = 0;
@@ -1513,12 +1650,22 @@ static int loadCustomName()
 				// Incorrect file size
 				status = 2;
 			}
+
+			// Close the file
+			fclose(file);
 		}
 	}
 	else // No files exist
 	{
-		// Save sample custom name file
-		saveCustomName();
+		// Get the number of characters to write (max. 5)
+		int length = std::min((int)(playerName.length()), 5);
+
+		// Loop over all of the characters in the tekno player name
+		for (int i = 0; i < length; i++)
+		{
+			// Write the full width character into the pointer
+			writeFullWidthChar(playerName.at(i), namePtr + (i * 3));
+		}
 	}
 
 	// Copy the name of the car into the car name variable
@@ -1583,7 +1730,7 @@ static int saveCustomGTWing()
 	if (!FileExists(path))
 	{
 		// Success status for the custom sticker dump
-		status = dumpMemory(path, gtWingPtr, GTWING_DATA_SIZE);
+		status = dumpMemory(path, gtWingPtr + 0x14, GTWING_DATA_SIZE);
 	}
 
 #ifdef _DEBUG
@@ -1675,8 +1822,7 @@ static int loadCustomGTWing()
 				fread(gtWingData, 0x1, GTWING_DATA_SIZE, file);
 
 				// Memcpys for the gt wing data will go here :)
-				memcpy((void*)(gtWingPtr + 0x10), (void*)(gtWingData + 0x10), 0x10); // Entire of row 2
-				memcpy((void*)(gtWingPtr + 0x20), (void*)(gtWingData + 0x20), 0x10); // Entire of row 3
+				memcpy((void*)(gtWingPtr + 0x14), (void*)(gtWingData), GTWING_DATA_SIZE); // Entire data
 
 				// Close the file
 				fclose(file);
@@ -1767,18 +1913,12 @@ static int saveCustomMiniSticker()
 			// Get the offset to the current sticker
 			int offset = i * 0x8;
 
-			// Get the offset to the save address
-			int save_offset = i * 0x10;
-
 			// Get the pointer to the current sticker
 			uintptr_t currentStickerPtr = *(uintptr_t*)(miniStickerPtr + offset);
 
 			// Copy the the second row from the current mini sticker pointer to the 'i'th row in the buffer
-			memcpy((void*)(miniStickerData + save_offset), (void*)(currentStickerPtr + 0x10), 0x10);
+			memcpy((void*)(miniStickerData + offset), (void*)(currentStickerPtr + 0x18), 0x8);
 		}
-
-		// Write 0xA0 -> 0xA4 from the mini sticker pointer to the save data
-		memcpy((void*)(miniStickerData + 0xA0), (void*)(miniStickerPtr + 0x50), 0x4);
 
 		// Success status for the custom sticker dump
 		status = writeDump(path, miniStickerData, MINI_STICKER_DATA_SIZE);
@@ -1876,18 +2016,12 @@ static int loadCustomMiniSticker()
 					// Get the offset to the current sticker
 					int offset = i * 0x8;
 
-					// Get the offset to the save address
-					int save_offset = i * 0x10;
-
 					// Get the pointer to the current sticker
 					uintptr_t currentStickerPtr = *(uintptr_t*)(miniStickerPtr + offset);
 
 					// Copy the 'i'th row in the buffer to the second row from the current mini sticker pointer
-					memcpy((void*)(currentStickerPtr + 0x10), (void*)(miniStickerData + save_offset), 0x10);
+					memcpy((void*)(currentStickerPtr + 0x10), (void*)(miniStickerData + offset), 0x8);
 				}
-
-				// Write 0xA0 -> 0xA4 from the save data to the mini sticker pointer
-				memcpy((void*)(miniStickerPtr + 0x50), (void*)(miniStickerData + 0xA0), 0x4);
 
 				// Close the file
 				fclose(file);
@@ -2490,7 +2624,7 @@ static int loadCarFile(char* filename)
 			memcpy((void*)(carSaveBase + 0xC0), carData + 0xC0, 8); // Window Sticker Toggle (0xC0)
 			// memcpy((void*)(carSaveBase + 0xC8), carData + 0xC8, 8); // Crash (Pointer)
 			memcpy((void*)(carSaveBase + 0xD0), carData + 0xD0, 8); // Window Sticker Value (0xD4)
-			memcpy((void*)(carSaveBase + 0xD8), carData + 0xD8, 8); // Versus Market (0xDC)
+			memcpy((void*)(carSaveBase + 0xD8), carData + 0xD8, 8); // Versus Marker (0xDC)
 
 			// memcpy((void*)(carSaveBase + 0xE0), carData + 0xE0, 8); // Crash (Pointer)
 			// memcpy((void*)(carSaveBase + 0xE8), carData + 0xE8, 8); // Crash (Pointer)
@@ -2968,11 +3102,9 @@ static int loadStoryData()
 			// Set the current chapter to 3 (3 Chapters cleared)
 			memset((void*)(saveStoryBase + 0xF0), 0x3, 0x1);
 
-			// Offsets for the locked chapter bitmask
-			memset((void*)(saveStoryBase + 0x110), 0x10, 0x1); // Chapter 5 locked
-			memset((void*)(saveStoryBase + 0x111), 0x42, 0x1); // Chapters 10, 15 locked
-			memset((void*)(saveStoryBase + 0x112), 0x08, 0x1); // Chapter 20 locked
-			memset((void*)(saveStoryBase + 0x113), 0x00, 0x1); // Empty space
+			// Chapter 5 locked, Chapters 10, 15 locked, Chapter 20 locked
+			uint8_t lockedBits[0x4] = {0x10, 0x42, 0x08, 0x0};
+			memcpy((void*)(saveStoryBase + 0x110), (void*)lockedBits, 0x4);
 		}
 	}
 
@@ -3817,26 +3949,6 @@ static InitFunction Wmmt5Func([]()
 
 					injector::WriteMemoryRaw(text, (char*)replaced.c_str(), replaced.length() + 1, true);
 				}
-			}
-		}
-
-		// Get the custom name specified in the  config file
-		std::string tempName = config["General"]["CustomName"];
-		
-		// If a custom name is set
-		if (!tempName.empty())
-		{
-			// Zero out the custom name variable
-			memset(customName, 0, 255);
-
-			// Copy the custom name to the custom name block
-			strcpy(customName, tempName.c_str());
-
-			// Sets if the custom name should be spammed (over the nameplate)
-			if (ToBool(config["General"]["SpamCustomName"]))
-			{
-				// Create the spam custom name thread
-				CreateThread(0, 0, spamCustomName, 0, 0, 0);
 			}
 		}
 
