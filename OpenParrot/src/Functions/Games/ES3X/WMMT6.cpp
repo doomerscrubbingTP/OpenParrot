@@ -792,6 +792,8 @@ static void watchMemory(char* filename, uintptr_t memory, size_t size, int delay
 	writeLog("watchMemory done.");
 }
 
+#endif
+
 // writeFullWidthChar(c: Char, target: uintptr_t)
 // Given a standard character, 
 static int writeFullWidthChar(char c, uintptr_t target)
@@ -838,8 +840,6 @@ static int writeFullWidthChar(char c, uintptr_t target)
 	// Return status code
 	return status;
 }
-
-#endif
 
 #pragma endregion
 
@@ -2722,8 +2722,6 @@ static int loadStoryData()
 
 	// Story save data offset
 	uintptr_t saveStoryBase = *(uintptr_t*)(savePtr + STORY_OFFSET);
-
-	watchMemory("story_watch", saveStoryBase, 0x2000, 0x30);
 
 	// Open the openprogress file with read privileges	
 	FILE* file = fopen(path, "rb");
