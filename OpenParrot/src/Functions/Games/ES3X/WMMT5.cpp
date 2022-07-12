@@ -519,9 +519,6 @@ static char customName[PROFILE_LENGTH];
 
 // *** Boolean Variables ***
 
-// Sets if saving is allowed or not
-static bool saveOk = false;
-
 // Terminal emulator settings
 static bool isFreePlay;
 static bool isEventMode2P;
@@ -529,6 +526,12 @@ static bool isEventMode4P;
 
 // Sets if loading is allowed
 static bool loadOk = false;
+
+// Sets if saving is allowed or not
+static bool saveOk = false;
+
+// Sets if TA thread is running or not
+static bool taThread = false;
 
 // *** Misc. Variables ***
 
@@ -1173,7 +1176,7 @@ static DWORD WINAPI watchTimeAttack(LPVOID)
 
 #pragma region cars
 
-#pragma region car_tune
+#pragma region tune
 
 // setFullTune(void): Int
 // If the currently loaded car is NOT fully tuned, 
@@ -1182,15 +1185,25 @@ static DWORD WINAPI watchTimeAttack(LPVOID)
 // does not change any values.
 static int setFullTune()
 {
+#ifdef _DEBUG
+	writeLog("Call to setFullTune...");
+#endif
+
 	// Car save hex address
 	auto carSaveBase = (uintptr_t*)((*(uintptr_t*)(imageBase + SAVE_OFFSET)) + CAR_OFFSET);
 
-	auto powerAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase)+0x98);
-	auto handleAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase)+0x9C);
+	// Pointer to power, handling and rank offsets
+	auto powerAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase) + 0x98);
+	auto handleAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase) + 0x9C);
+	auto rankAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase) + 0xA4);
 
-	// Dereference the power value from the memory address
+	// Dereference the power, handling and rank values from memory
 	auto powerValue = injector::ReadMemory<uint8_t>(powerAddress, true);
 	auto handleValue = injector::ReadMemory<uint8_t>(handleAddress, true);
+	auto rankValue = injector::ReadMemory<uint8_t>(rankAddress, true);
+
+	// Success status (default: fail)
+	bool update = 1;
 
 	// If the power and handling values do not add up to fully tuned
 	if (powerValue + handleValue < 0x20)
@@ -1199,12 +1212,23 @@ static int setFullTune()
 		injector::WriteMemory<uint8_t>(powerAddress, 0x10, true);
 		injector::WriteMemory<uint8_t>(handleAddress, 0x10, true);
 
-		// Updated
-		return 1;
+		// Rank is less than C4
+		if (rankValue < 0x07)
+		{
+			// Set the rank to 0x07 (C4)
+			injector::WriteMemory<uint8_t>(rankAddress, 0x07, true);
+		}
+
+		// Success status
+		update = 0;
 	}
 
-	// Not updated
-	return 0;
+#ifdef _DEBUG
+	update ? writeLog("setFullTune not updated.") : writeLog("setFullTune updated.");
+#endif
+
+	// Return status code
+	return update;
 }
 
 // forceFullTune(pArguments: void*): DWORD WINAPI
@@ -1351,9 +1375,6 @@ static int loadCustomSticker()
 				// Write the string end line characters to the second row of the pointer
 				memcpy((void*)(stickerPtr + 0x10), stringTerminator, STICKER_LENGTH);
 
-				// Close the file
-				fclose(file);
-
 				// Success
 				status = 0;
 			}
@@ -1362,6 +1383,9 @@ static int loadCustomSticker()
 				// Incorrect file size 
 				status = 2;
 			}
+
+			// Close the file
+			fclose(file);
 		}
 	}
 	else // No files exist
@@ -1798,9 +1822,6 @@ static int loadCustomGTWing()
 				// Memcpys for the gt wing data will go here :)
 				memcpy((void*)(gtWingPtr + 0x10), (void*)(gtWingData), GTWING_DATA_SIZE); // Entire data
 
-				// Close the file
-				fclose(file);
-
 				// Success
 				status = 0;
 			}
@@ -1809,6 +1830,9 @@ static int loadCustomGTWing()
 				// Incorrect file size
 				status = 2;
 			}
+
+			// Close the file
+			fclose(file);
 		}
 	}
 	else // No files exist
@@ -2253,11 +2277,6 @@ static int loadCustomRegion()
 #pragma region car_main
 
 // verifyCarData(void): Int
-// Compares the data in the loaded car data to the 
-// data which is to be saved, to ensure that the new data
-// has not been corrupted. This has been implemented as 
-// a fix for a bug which was overwriting save files with
-// junk data after entering the test menu during versus mode.
 static int verifyCarData()
 {
 #ifdef _DEBUG
@@ -2270,57 +2289,11 @@ static int verifyCarData()
 	// Address where car save data starts
 	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
 
-	// Array which stores the offsets which should
-	// be loaded and their purpose for car data.
-	uint8_t offsets[] = {
-		0x20, 0x28, 0x30, 0x34,
-		0x38, 0x40, 0x50, 0x58,
-		0x78, 0x80, 0x88, 0x98,
-		0xA0
-	};
-
 	// Function validation status (default: invalid)
-	bool status = 1;
+	dumpMemory("cardata.bin", carSaveBase, CAR_DATA_SIZE);
 
-	// Get the number of items in the offsets list
-	uint32_t count = sizeof(offsets) / sizeof(*offsets);
-
-	// Get the total value of the element(s)
-	// If this is greater than zero, the car will be saved
-	// If it is less than zero, it will not be saved
-	int total = 0;
-
-	// Loop over all of the offsets
-	for (int i = 0; i < count; i++)
-	{
-		// Get the offset from the list
-		uint8_t offset = offsets[i];
-
-		// Get the current value in memory for the offset
-		uint32_t value = injector::ReadMemory<uint32_t>(carSaveBase + offset);
-
-		// Add the value to the total
-		total += value;
-	}
-
-	// If the total is greater than zero
-	if (total > 0)
-	{
-		// Car has not been zeroed, save ok
-		status = 0;
-	}
-	else // Total is not greater than zero
-	{
-		// Car has been zeroed, save not ok
-
-		// In the exceptional circumstance that
-		// a car could have this result genuinely, 
-		// there would be no consequences to not 
-		// saving its data anyway (as there is no 
-		// relevant data to save).
-
-		// Status remains 1
-	}
+	// If there is no value at this offset, the save file is invalid
+	bool status = (!((bool)(injector::ReadMemory<uint64_t>(carSaveBase))));
 
 #ifdef _DEBUG
 	status ? writeLog("verifyCarData validation failed.") : writeLog("verifyCarData validation success.");
@@ -2510,7 +2483,7 @@ static int loadCarData()
 	loadCustomMiniSticker();
 
 	// If the force full tune switch is set
-	if (ToBool(config["Save"]["Force Full Tune"]))
+	if (ToBool(config["Tune"]["Force Full Tune"]))
 	{
 		// Set the car to be fully tuned
 		setFullTune();
@@ -2813,7 +2786,7 @@ static int loadStoryData()
 	else // No story file
 	{
 		// If the start with 100 stories option is set
-		if (ToBool(config["Story"]["Start at 60 Stories"]))
+		if (ToBool(config["Save"]["Start at 60 Stories"]))
 		{
 			// Set total wins to 100
 			memset((void*)(saveStoryBase + 0x118), 0x3C, 0x1);
@@ -3226,11 +3199,15 @@ static int loadGameData()
 	// Generate path to the time attack csv file
 	sprintf(taCsvPath, "%s\\%s", profilePath, TA_CSV_FILENAME);
 
-	// If the time attack csv file exists
-	if (FileExists(taCsvPath))
+	// If the time attack thread has not been started
+	// and the time attack file exists
+	if ((!taThread) && FileExists(taCsvPath))
 	{
 		// Start the time attack / versus monitor thread
 		CreateThread(0, 0, watchTimeAttack, 0, 0, 0);
+
+		// TA thread has been started
+		taThread = true;
 	}
 
 	// Sleep for 30 seconds (Thanks Chery!)
@@ -3482,250 +3459,261 @@ DWORD WINAPI Wmmt5FfbCollector(void* ctx)
 #pragma region main
 
 static InitFunction Wmmt5Func([]()
-	{
+{
 #ifdef _DEBUG
-		writeLog("Game: Wangan Midnight Maximum Tune 5");
-		writeLog("Call to init function ...");
+	writeLog("Game: Wangan Midnight Maximum Tune 5");
+	writeLog("Call to init function ...");
 #endif
 
-		FILE* fileF = _wfopen(L"Fsetting.lua.gz", L"r");
-		if (fileF == NULL)
-		{
-			FILE* settingsF = _wfopen(L"Fsetting.lua.gz", L"wb");
-			fwrite(settingData, 1, sizeof(settingData), settingsF);
-			fclose(settingsF);
-		}
-		else
-		{
-			fclose(fileF);
-		}
+	// Custom Name Stuff
 
-		FILE* fileG = _wfopen(L"Gsetting.lua.gz", L"r");
-		if (fileG == NULL)
-		{
-			FILE* settingsG = _wfopen(L"Gsetting.lua.gz", L"wb");
-			fwrite(settingData, 1, sizeof(settingData), settingsG);
-			fclose(settingsG);
-		}
-		else
-		{
-			fclose(fileG);
-		}
+	// Get the custom name specified in the  config file
+	std::string tempName = config["General"]["CustomName"];
 
+	// If a custom name is set
+	if (!tempName.empty())
+	{
+		// Zero out the custom name variable
+		memset(customName, 0x0, 0xFF);
 
-		bool isTerminal = false;
-		if (ToBool(config["General"]["TerminalMode"]))
-		{
-			isTerminal = true;
-		}
+		// Copy the custom name to the custom name block
+		strcpy(customName, tempName.c_str());
+	}
 
-		std::string networkip = config["General"]["NetworkAdapterIP"];
-		if (!networkip.empty())
-		{
-			//strcpy(ipaddr, networkip.c_str());
-			ipaddr = networkip.c_str();
-		}
+	FILE* fileF = _wfopen(L"Fsetting.lua.gz", L"r");
+	if (fileF == NULL)
+	{
+		FILE* settingsF = _wfopen(L"Fsetting.lua.gz", L"wb");
+		fwrite(settingData, 1, sizeof(settingData), settingsF);
+		fclose(settingsF);
+	}
+	else
+	{
+		fclose(fileF);
+	}
 
-		hookPort = "COM3";
-		imageBase = (uintptr_t)GetModuleHandleA(0);
+	FILE* fileG = _wfopen(L"Gsetting.lua.gz", L"r");
+	if (fileG == NULL)
+	{
+		FILE* settingsG = _wfopen(L"Gsetting.lua.gz", L"wb");
+		fwrite(settingData, 1, sizeof(settingData), settingsG);
+		fclose(settingsG);
+	}
+	else
+	{
+		fclose(fileG);
+	}
 
-		MH_Initialize();
+	bool isTerminal = false;
+	if (ToBool(config["General"]["TerminalMode"]))
+	{
+		isTerminal = true;
+	}
 
-		// Hook dongle funcs
-		MH_CreateHookApi(L"hasp_windows_x64_109906.dll", "hasp_write", Hook_hasp_write, NULL);
-		MH_CreateHookApi(L"hasp_windows_x64_109906.dll", "hasp_read", Hook_hasp_read, NULL);
-		MH_CreateHookApi(L"hasp_windows_x64_109906.dll", "hasp_get_size", Hook_hasp_get_size, NULL);
-		MH_CreateHookApi(L"hasp_windows_x64_109906.dll", "hasp_decrypt", Hook_hasp_decrypt, NULL);
-		MH_CreateHookApi(L"hasp_windows_x64_109906.dll", "hasp_encrypt", Hook_hasp_encrypt, NULL);
-		MH_CreateHookApi(L"hasp_windows_x64_109906.dll", "hasp_logout", Hook_hasp_logout, NULL);
-		MH_CreateHookApi(L"hasp_windows_x64_109906.dll", "hasp_login", Hook_hasp_login, NULL);
-		MH_CreateHookApi(L"WS2_32", "bind", Hook_bind, reinterpret_cast<LPVOID*>(&pbind));
+	std::string networkip = config["General"]["NetworkAdapterIP"];
+	if (!networkip.empty())
+	{
+		ipaddr = networkip.c_str();
+	}
 
-		GenerateDongleData(isTerminal);
+	hookPort = "COM3";
+	imageBase = (uintptr_t)GetModuleHandleA(0);
 
-		// Patch some check
-		// 0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 E4 EB 03 41 B4 01
-		// FOUND ON 21, 10
-		// NOT WORKING 1
-		// 0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 ?? EB
-		// FOUND ON 1
-		//injector::WriteMemory<uint8_t>(imageBase + 0x6286EC, 0, true); 
-		injector::WriteMemory<uint8_t>(hook::get_pattern("0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 ? EB", 0x13), 0, true);
+	MH_Initialize();
+	
+	// Hook dongle funcs
+	MH_CreateHookApi(L"hasp_windows_x64_109906.dll", "hasp_write", Hook_hasp_write, NULL);
+	MH_CreateHookApi(L"hasp_windows_x64_109906.dll", "hasp_read", Hook_hasp_read, NULL);
+	MH_CreateHookApi(L"hasp_windows_x64_109906.dll", "hasp_get_size", Hook_hasp_get_size, NULL);
+	MH_CreateHookApi(L"hasp_windows_x64_109906.dll", "hasp_decrypt", Hook_hasp_decrypt, NULL);
+	MH_CreateHookApi(L"hasp_windows_x64_109906.dll", "hasp_encrypt", Hook_hasp_encrypt, NULL);
+	MH_CreateHookApi(L"hasp_windows_x64_109906.dll", "hasp_logout", Hook_hasp_logout, NULL);
+	MH_CreateHookApi(L"hasp_windows_x64_109906.dll", "hasp_login", Hook_hasp_login, NULL);
+	MH_CreateHookApi(L"WS2_32", "bind", Hook_bind, reinterpret_cast<LPVOID*>(&pbind));
 
+	GenerateDongleData(isTerminal);
+
+	// Patch some check
+	// 0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 E4 EB 03 41 B4 01
+	// FOUND ON 21, 10
+	// NOT WORKING 1
+	// 0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 ?? EB
+	// FOUND ON 1
+	//injector::WriteMemory<uint8_t>(imageBase + 0x6286EC, 0, true); 
+	injector::WriteMemory<uint8_t>(hook::get_pattern("0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 ? EB", 0x13), 0, true);
+
+	// Patch some jnz
+	// 83 C0 FD 83 F8 01 0F 87 B4 00 00 00 83 BF D0 06 00 00 3C 73 29 48 8D 8D 60 06 00 00
+	// FOUND ON 21, 10
+	// NOT FOUND: 1
+	// 83 C0 FD 83 F8 01 0F 87 B4 00 00 00
+	// FOUND ON 1
+	//injector::MakeNOP(imageBase + 0x628AE0, 6);
+	injector::MakeNOP(hook::get_pattern("83 C0 FD 83 F8 01 0F 87 B4 00 00 00", 6), 6);
+
+	// Patch some shit
+	// 83 FA 04 0F 8C 1E 01 00 00 4C 89 44 24 18 4C 89 4C 24 20
+	// FOUND ON 21, 10, 1
+	// NOT FOUND:
+	//injector::WriteMemory<uint8_t>(imageBase + 0x7B9882, 0, true);
+	injector::WriteMemory<uint8_t>(hook::get_pattern("83 FA 04 0F 8C 1E 01 00 00 4C 89 44 24 18 4C 89 4C 24 20", 2), 0, true);
+
+	// Skip weird camera init that stucks entire pc on certain brands. TESTED ONLY ON 05!!!!
+	if (ToBool(config["General"]["WhiteScreenFix"]))
+	{
+		injector::WriteMemory<DWORD>(hook::get_pattern("48 8B C4 55 57 41 54 41 55 41 56 48 8D 68 A1 48 81 EC 90 00 00 00 48 C7 45 D7 FE FF FF FF 48 89 58 08 48 89 70 18 45 33 F6 4C 89 75 DF 33 C0 48 89 45 E7", 0), 0x90C3C032, true);
+	}
+
+	// Patch some call
+	// 45 33 C0 BA 65 09 00 00 48 8D 4D B0 E8 ?? ?? ?? ?? 48 8B 08
+	// FOUND ON 21, 10, 1
+	//injector::MakeNOP(imageBase + 0x7DADED, 5);
+	injector::MakeNOP(hook::get_pattern("45 33 C0 BA 65 09 00 00 48 8D 4D B0 E8 ? ? ? ? 48 8B 08", 12), 5);
+	{
+		// 199AE18 TIME OFFSET RVA
+
+		auto location = hook::get_pattern<char>("41 3B C7 74 0E 48 8D 8F B8 00 00 00 BA F6 01 00 00 EB 6E 48 8D 8F A0 00 00 00");
 		// Patch some jnz
-		// 83 C0 FD 83 F8 01 0F 87 B4 00 00 00 83 BF D0 06 00 00 3C 73 29 48 8D 8D 60 06 00 00
-		// FOUND ON 21, 10
-		// NOT FOUND: 1
-		// 83 C0 FD 83 F8 01 0F 87 B4 00 00 00
-		// FOUND ON 1
-		//injector::MakeNOP(imageBase + 0x628AE0, 6);
-		injector::MakeNOP(hook::get_pattern("83 C0 FD 83 F8 01 0F 87 B4 00 00 00", 6), 6);
+		// 41 3B C7 74 0E 48 8D 8F B8 00 00 00 BA F6 01 00 00 EB 6E 48 8D 8F A0 00 00 00
+		// FOUND ON 21, 10, 1
+		//injector::WriteMemory<uint8_t>(imageBase + 0x943F52, 0xEB, true);
+		injector::WriteMemory<uint8_t>(location + 3, 0xEB, true);
 
-		// Patch some shit
-		// 83 FA 04 0F 8C 1E 01 00 00 4C 89 44 24 18 4C 89 4C 24 20
+		// Skip some jnz
+		//injector::MakeNOP(imageBase + 0x943F71, 2);
+		injector::MakeNOP(location + 0x22, 2);
+
+		// Skip some jnz
+		//injector::MakeNOP(imageBase + 0x943F82, 2);
+		injector::MakeNOP(location + 0x33, 2);
+	}
+
+	// Skip DebugBreak on MFStartup fail
+	// 48 83 EC 28 33 D2 B9 70 00 02 00 E8 ?? ?? ?? ?? 85 C0 79 06
+	// FOUND on 21, 1
+	{
+		auto location = hook::get_pattern<char>("48 83 EC 28 33 D2 B9 70 00 02 00 E8 ? ? ? ? 85 C0 79 06");
+		injector::WriteMemory<uint8_t>(location + 0x12, 0xEB, true);
+	}
+
+	// Terminal mode is on
+	if (isTerminal)
+	{
+		// Patch some func to 1
+		// 
 		// FOUND ON 21, 10, 1
 		// NOT FOUND:
-		//injector::WriteMemory<uint8_t>(imageBase + 0x7B9882, 0, true);
-		injector::WriteMemory<uint8_t>(hook::get_pattern("83 FA 04 0F 8C 1E 01 00 00 4C 89 44 24 18 4C 89 4C 24 20", 2), 0, true);
+		//safeJMP(imageBase + 0x7BE440, ReturnTrue);
+		safeJMP(hook::get_pattern("0F B6 41 05 2C 30 3C 09 77 04 0F BE C0 C3 83 C8 FF C3"), ReturnTrue);
 
-		// Skip weird camera init that stucks entire pc on certain brands. TESTED ONLY ON 05!!!!
-		if (ToBool(config["General"]["WhiteScreenFix"]))
-		{
-			injector::WriteMemory<DWORD>(hook::get_pattern("48 8B C4 55 57 41 54 41 55 41 56 48 8D 68 A1 48 81 EC 90 00 00 00 48 C7 45 D7 FE FF FF FF 48 89 58 08 48 89 70 18 45 33 F6 4C 89 75 DF 33 C0 48 89 45 E7", 0), 0x90C3C032, true);
-		}
-
-		// Patch some call
-		// 45 33 C0 BA 65 09 00 00 48 8D 4D B0 E8 ?? ?? ?? ?? 48 8B 08
+		// Patch some func to 1
+		// 40 53 48 83 EC 20 48 83 39 00 48 8B D9 75 28 48 8D ?? ?? ?? ?? 00 48 8D ?? ?? ?? ?? 00 41 B8 ?? ?? 00 00 FF 15 ?? ?? ?? ?? 4C 8B 1B 41 0F B6 43 78
 		// FOUND ON 21, 10, 1
-		//injector::MakeNOP(imageBase + 0x7DADED, 5);
-		injector::MakeNOP(hook::get_pattern("45 33 C0 BA 65 09 00 00 48 8D 4D B0 E8 ? ? ? ? 48 8B 08", 12), 5);
-
+		//safeJMP(imageBase + 0x7CF8D0, ReturnTrue);
+		safeJMP(hook::get_pattern("40 53 48 83 EC 20 48 83 39 00 48 8B D9 75 28 48 8D ? ? ? ? 00 48 8D ? ? ? ? 00 41 B8 ? ? 00 00 FF 15 ? ? ? ? 4C 8B 1B 41 0F B6 43 78"), ReturnTrue);
+	}
+	else // Terminal mode is off
+	{
+		// Disregard terminal scanner stuff.
+		// 48 8B 18 48 3B D8 0F 84 88 00 00 00 39 7B 1C 74 60 80 7B 31 00 75 4F 48 8B 43 10 80 78 31 00
+		// FOUND ON 21, 10, 1
+		//injector::MakeNOP(imageBase + 0x91E1AE, 6);
+		//injector::MakeNOP(imageBase + 0x91E1B7, 2);
+		//injector::MakeNOP(imageBase + 0x91E1BD, 2);
 		{
-			// 199AE18 TIME OFFSET RVA
-
-			auto location = hook::get_pattern<char>("41 3B C7 74 0E 48 8D 8F B8 00 00 00 BA F6 01 00 00 EB 6E 48 8D 8F A0 00 00 00");
-			// Patch some jnz
-			// 41 3B C7 74 0E 48 8D 8F B8 00 00 00 BA F6 01 00 00 EB 6E 48 8D 8F A0 00 00 00
-			// FOUND ON 21, 10, 1
-			//injector::WriteMemory<uint8_t>(imageBase + 0x943F52, 0xEB, true);
-			injector::WriteMemory<uint8_t>(location + 3, 0xEB, true);
-
-			// Skip some jnz
-			//injector::MakeNOP(imageBase + 0x943F71, 2);
-			injector::MakeNOP(location + 0x22, 2);
-
-			// Skip some jnz
-			//injector::MakeNOP(imageBase + 0x943F82, 2);
-			injector::MakeNOP(location + 0x33, 2);
+			auto location = hook::get_pattern<char>("48 8B 18 48 3B D8 0F 84 88 00 00 00 39 7B 1C 74 60 80 7B 31 00 75 4F 48 8B 43 10 80 78 31 00");
+			injector::MakeNOP(location + 6, 6); // 6
+			injector::MakeNOP(location + 0xF, 2); // 0xF
+			injector::MakeNOP(location + 0x15, 2); // 0x15
 		}
+	}
 
-		// Skip DebugBreak on MFStartup fail
-		// 48 83 EC 28 33 D2 B9 70 00 02 00 E8 ?? ?? ?? ?? 85 C0 79 06
-		// FOUND on 21, 1
-		{
-			auto location = hook::get_pattern<char>("48 83 EC 28 33 D2 B9 70 00 02 00 E8 ? ? ? ? 85 C0 79 06");
-			injector::WriteMemory<uint8_t>(location + 0x12, 0xEB, true);
-		}
-		//safeJMP(hook::get_pattern(V("48 83 EC 28 33 D2 B9 70 00 02 00 E8 ? ? ? ? 85 C0 79 06")), ReturnTrue);
+	auto chars = { 'F', 'G' };
 
-		if (isTerminal)
-		{
-			// Patch some func to 1
-			// 
-			// FOUND ON 21, 10, 1
-			// NOT FOUND:
-			//safeJMP(imageBase + 0x7BE440, ReturnTrue);
-			safeJMP(hook::get_pattern("0F B6 41 05 2C 30 3C 09 77 04 0F BE C0 C3 83 C8 FF C3"), ReturnTrue);
+	for (auto cha : chars)
+	{
+		auto patterns = hook::pattern(va("%02X 3A 2F", cha));
 
-			// Patch some func to 1
-			// 40 53 48 83 EC 20 48 83 39 00 48 8B D9 75 28 48 8D ?? ?? ?? ?? 00 48 8D ?? ?? ?? ?? 00 41 B8 ?? ?? 00 00 FF 15 ?? ?? ?? ?? 4C 8B 1B 41 0F B6 43 78
-			// FOUND ON 21, 10, 1
-			//safeJMP(imageBase + 0x7CF8D0, ReturnTrue);
-			safeJMP(hook::get_pattern("40 53 48 83 EC 20 48 83 39 00 48 8B D9 75 28 48 8D ? ? ? ? 00 48 8D ? ? ? ? 00 41 B8 ? ? 00 00 FF 15 ? ? ? ? 4C 8B 1B 41 0F B6 43 78"), ReturnTrue);
-		}
-		else
+		if (patterns.size() > 0)
 		{
-			// Disregard terminal scanner stuff.
-			// 48 8B 18 48 3B D8 0F 84 88 00 00 00 39 7B 1C 74 60 80 7B 31 00 75 4F 48 8B 43 10 80 78 31 00
-			// FOUND ON 21, 10, 1
-			//injector::MakeNOP(imageBase + 0x91E1AE, 6);
-			//injector::MakeNOP(imageBase + 0x91E1B7, 2);
-			//injector::MakeNOP(imageBase + 0x91E1BD, 2);
+			for (int i = 0; i < patterns.size(); i++)
 			{
-				auto location = hook::get_pattern<char>("48 8B 18 48 3B D8 0F 84 88 00 00 00 39 7B 1C 74 60 80 7B 31 00 75 4F 48 8B 43 10 80 78 31 00");
-				injector::MakeNOP(location + 6, 6); // 6
-				injector::MakeNOP(location + 0xF, 2); // 0xF
-				injector::MakeNOP(location + 0x15, 2); // 0x15
-			}
+				char* text = patterns.get(i).get<char>(0);
+				std::string text_str(text);
 
-			// spam thread
-			if (ToBool(config["General"]["TerminalEmulator"]))
-			{
-				CreateThread(0, 0, SpamMulticast, 0, 0, 0);
+				std::string to_replace = va("%c:/", cha);
+				std::string replace_with = va("./%c", cha);
+				std::string replaced = text_str.replace(0, to_replace.length(), replace_with);
+
+				injector::WriteMemoryRaw(text, (char*)replaced.c_str(), replaced.length() + 1, true);
 			}
 		}
+	}
 
-		auto chars = { 'F', 'G' };
+	// Save story stuff (only 05)
+	{
+		// Skip erasing of temp card data
+		injector::WriteMemory<uint8_t>(imageBase + 0x8DEBC3, 0xEB, true);
 
-		for (auto cha : chars)
+		safeJMP(imageBase + 0x5612F0, ReturnTrue);
+		safeJMP(imageBase + 0x5753C0, ReturnTrue);
+		safeJMP(imageBase + 0x57DF10, ReturnTrue);
+
+		safeJMP(imageBase + 0x92DB20, ReturnTrue);
+		safeJMP(imageBase + 0x579090, ReturnTrue);
+
+		// Skip more
+		safeJMP(imageBase + 0x54B0F0, ReturnTrue);
+		safeJMP(imageBase + 0x909DB0, ReturnTrue);
+		safeJMP(imageBase + 0x59FD90, ReturnTrue);
+		safeJMP(imageBase + 0x5A0030, ReturnTrue);
+		safeJMP(imageBase + 0x915370, ReturnTrue);
+		safeJMP(imageBase + 0x5507A0, ReturnTrue);
+		safeJMP(imageBase + 0x561290, ReturnTrue);
+
+		// Check for vanilla mode
+		bool vanillaMode = ToBool(config["General"]["Vanilla Mode (No Patches)"]);
+
+		// Vanilla mode is set
+		if (!vanillaMode)
 		{
-			auto patterns = hook::pattern(va("%02X 3A 2F", cha));
-
-			if (patterns.size() > 0)
-			{
-				for (int i = 0; i < patterns.size(); i++)
-				{
-					char* text = patterns.get(i).get<char>(0);
-					std::string text_str(text);
-
-					std::string to_replace = va("%c:/", cha);
-					std::string replace_with = va("./%c", cha);
-
-					std::string replaced = text_str.replace(0, to_replace.length(), replace_with);
-
-					injector::WriteMemoryRaw(text, (char*)replaced.c_str(), replaced.length() + 1, true);
-				}
-			}
-		}
-
-		// Save story stuff (only 05)
-		{
-			// skip erasing of temp card data
-			injector::WriteMemory<uint8_t>(imageBase + 0x8DEBC3, 0xEB, true);
-			// Skip erasing of temp card
-
-			// Old story load func
-			// safeJMP(imageBase + 0x54DCE1, LoadGameData);
-			safeJMP(imageBase + 0x5612F0, ReturnTrue);
-			safeJMP(imageBase + 0x5753C0, ReturnTrue);
-			safeJMP(imageBase + 0x57DF10, ReturnTrue);
-
-			safeJMP(imageBase + 0x92DB20, ReturnTrue);
-
-			// safeJMP(imageBase + 0x5628C0, ReturnTrue); // Miles patch
-
-			safeJMP(imageBase + 0x579090, ReturnTrue);
-
-			// Skip more
-			safeJMP(imageBase + 0x54B0F0, ReturnTrue);
-			safeJMP(imageBase + 0x909DB0, ReturnTrue);
-			safeJMP(imageBase + 0x59FD90, ReturnTrue);
-			safeJMP(imageBase + 0x5A0030, ReturnTrue);
-			safeJMP(imageBase + 0x915370, ReturnTrue);
-			safeJMP(imageBase + 0x5507A0, ReturnTrue);
-			safeJMP(imageBase + 0x561290, ReturnTrue);
-
-
-			// safeJMP(imageBase + 0x5A0AE8, LoadWmmt5CarData);
-
+			// Enable load / save hooks
+			
 			// Load story and car data
+
+			// Load game trigger
 			safeJMP(imageBase + 0x5A0AE8, loadGame);
 
-			// crash fix
-			//safeJMP(imageBase + 0xAD6F28, WmmtOperatorDelete);
-			//safeJMP(imageBase + 0xAD6F4C, WmmtMemset);
-
-			// Save progress trigger
-			injector::WriteMemory<WORD>(imageBase + 0x556CE3, 0xB848, true);
-			injector::WriteMemory<uintptr_t>(imageBase + 0x556CE3 + 2, (uintptr_t)SaveOk, true);
-			injector::WriteMemory<DWORD>(imageBase + 0x556CED, 0x9090D0FF, true);
-
-			// Try save later!
+			// Save game data trigger
 			injector::MakeNOP(imageBase + 0x308546, 0x12);
 			injector::WriteMemory<WORD>(imageBase + 0x308546, 0xB848, true);
 			injector::WriteMemory<uintptr_t>(imageBase + 0x308546 + 2, (uintptr_t)SaveGameData, true);
 			injector::WriteMemory<DWORD>(imageBase + 0x308550, 0x3348D0FF, true);
 			injector::WriteMemory<WORD>(imageBase + 0x308550 + 4, 0x90C0, true);
 
-			CreateThread(0, 0, Wmmt5FfbCollector, 0, 0, 0);
+			// Prevents startup saving
+			injector::WriteMemory<WORD>(imageBase + 0x556CE3, 0xB848, true);
+			injector::WriteMemory<uintptr_t>(imageBase + 0x556CE3 + 2, (uintptr_t)SaveOk, true);
+			injector::WriteMemory<DWORD>(imageBase + 0x556CED, 0x9090D0FF, true);
+
+			// If we are not running as a terminal, and terminal emu is enabled
+			if ((!isTerminal) && ToBool(config["General"]["TerminalEmulator"]))
+			{
+				// Create the terminal emulator thread
+				CreateThread(0, 0, SpamMulticast, 0, 0, 0);
+			}
 		}
 
-		MH_EnableHook(MH_ALL_HOOKS);
+		// Start force feedback thread
+		CreateThread(0, 0, Wmmt5FfbCollector, 0, 0, 0);
+	}
 
+	MH_EnableHook(MH_ALL_HOOKS);
+	 
 #ifdef _DEBUG
-		writeLog("Init function done.");
+	writeLog("Init function done.");
 #endif
-	}, GameID::WMMT5);
+}, GameID::WMMT5);
 #endif
 #pragma optimize("", on)
 #pragma endregion

@@ -387,11 +387,6 @@ static char carName[NAME_LENGTH];
 // Custom name (i.e. Scrubbs)
 static char customName[PROFILE_LENGTH];
 
-// *** Boolean Variables ***
-
-// Sets if saving is allowed or not
-static bool saveOk = false;
-
 // Terminal emulator settings
 static bool isFreePlay;
 static bool isEventMode2P;
@@ -399,6 +394,12 @@ static bool isEventMode4P;
 
 // Sets if loading is allowed
 static bool loadOk = false;
+
+// Sets if saving is allowed or not
+static bool saveOk = false;
+
+// Sets if TA thread is running or not
+static bool taThread = false;
 
 // MT6 Stuff
 
@@ -1012,8 +1013,6 @@ static DWORD WINAPI watchTimeAttack(LPVOID)
 	// Address where player save data starts
 	uintptr_t savePtr = *(uintptr_t*)(imageBase + SAVE_OFFSET);
 
-	// watchMemory("story_ptr", storySaveBase + 0x2B0, 0x200, 15);
-
 	// Story save data offset + Time Attack offset + Final Time offset
 	uintptr_t finalTimePtr = *(uintptr_t*)(savePtr + STORY_OFFSET) + 0x2D0;
 
@@ -1088,14 +1087,21 @@ static DWORD WINAPI watchTimeAttack(LPVOID)
 // does not change any values.
 static int setCarTuneNeons()
 {
+	#ifdef _DEBUG
+		writeLog("Call to setCarTuneNeons...");
+	#endif
+
 	// Car save hex address
-	uintptr_t carSAVE_OFFSET = *(uintptr_t*)((*(uintptr_t*)(imageBase + SAVE_OFFSET)) + CAR_OFFSET);
+	uintptr_t carSaveBase = *(uintptr_t*)((*(uintptr_t*)(imageBase + SAVE_OFFSET)) + CAR_OFFSET);
+
+	// Success status (default: fail)
+	bool update = 1;
 
 	// Force neon is set
 	if (ForceNeon)
 	{
 		// Set the neon colour
-		injector::WriteMemory<BYTE>(carSAVE_OFFSET + 0x60, NeonColour, true);
+		injector::WriteMemory<BYTE>(carSaveBase + 0x60, NeonColour, true);
 	}
 
 	// Force full tune is set
@@ -1103,20 +1109,32 @@ static int setCarTuneNeons()
 	{
 		// Dereference the power / handling values from the memory address
 
-		auto powerValue = injector::ReadMemory<uint8_t>(carSAVE_OFFSET + 0x74, true);
-		auto handleValue = injector::ReadMemory<uint8_t>(carSAVE_OFFSET + 0x80, true);
+		auto powerValue = injector::ReadMemory<uint8_t>(carSaveBase + 0x74, true);
+		auto handleValue = injector::ReadMemory<uint8_t>(carSaveBase + 0x80, true);
+		auto rankValue = injector::ReadMemory<uint8_t>(carSaveBase + 0x84, true);
 
 		// If the power and handling values do not add up to fully tuned
 		if (powerValue + handleValue < 0x22)
 		{
 			// Car is not fully tuned, force it to the default full tune
-			injector::WriteMemory<uint8_t>(carSAVE_OFFSET + 0x74, 0x11, true);
-			injector::WriteMemory<uint8_t>(carSAVE_OFFSET + 0x80, 0x11, true);
+			injector::WriteMemory<uint8_t>(carSaveBase + 0x74, 0x11, true);
+			injector::WriteMemory<uint8_t>(carSaveBase + 0x80, 0x11, true);
+
+			// Rank is less than C3
+			if (rankValue < 0x08)
+			{
+				// Set the rank to 0x08 (C3)
+				injector::WriteMemory<uint8_t>(carSaveBase + 0x84, 0x08, true);
+			}
 		}
 	}
 
-	// Updated
-	return 1;
+#ifdef _DEBUG
+	update ? writeLog("setFullTune not updated.") : writeLog("setFullTune updated.");
+#endif
+
+	// Return update code
+	return update;
 }
 
 // SpamCarTuneNeons(LPVOID): DWORD WINAPI
@@ -1710,9 +1728,6 @@ static int loadCustomGTWing()
 				// Memcpys for the gt wing data will go here :)
 				memcpy((void*)(gtWingPtr + 0x14), (void*)(gtWingData), GTWING_DATA_SIZE); // Entire data
 
-				// Close the file
-				fclose(file);
-
 				// Success
 				status = 0;
 			}
@@ -1721,6 +1736,9 @@ static int loadCustomGTWing()
 				// Incorrect file size
 				status = 2;
 			}
+
+			// Close the file
+			fclose(file);
 		}
 	}
 	else // No files exist
@@ -2152,11 +2170,6 @@ static int loadCustomRegion()
 #pragma region car_main
 
 // verifyCarData(void): Int
-// Compares the data in the loaded car data to the 
-// data which is to be saved, to ensure that the new data
-// has not been corrupted. This has been implemented as 
-// a fix for a bug which was overwriting save files with
-// junk data after entering the test menu during versus mode.
 static int verifyCarData()
 {
 #ifdef _DEBUG
@@ -2169,58 +2182,11 @@ static int verifyCarData()
 	// Address where car save data starts
 	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
 
-	// Array which stores the offsets which should
-	// be loaded and their purpose for car data.
-	uint8_t offsets[] = {
-		0x28, 0x34, 0x38, 0x3C, 
-		0x40, 0x44, 0x48, 0x4C, 
-		0x58, 0x5C, 0x60, 0x64, 
-		0x68, 0x6C, 0x70, 0x74, 
-		0x80, 0x84, 0x90, 0x98
-	};
-
 	// Function validation status (default: invalid)
-	bool status = 1;
+	dumpMemory("cardata.bin", carSaveBase, CAR_DATA_SIZE);
 
-	// Get the number of items in the offsets list
-	uint32_t count = sizeof(offsets) / sizeof(*offsets);
-
-	// Get the total value of the element(s)
-	// If this is greater than zero, the car will be saved
-	// If it is less than zero, it will not be saved
-	int total = 0;
-
-	// Loop over all of the offsets
-	for (int i = 0; i < count; i++)
-	{
-		// Get the offset from the list
-		uint8_t offset = offsets[i];
-
-		// Get the current value in memory for the offset
-		uint32_t value = injector::ReadMemory<uint32_t>(carSaveBase + offset);
-
-		// Add the value to the total
-		total += value;
-	}
-
-	// If the total is greater than zero
-	if (total > 0)
-	{
-		// Car has not been zeroed, save ok
-		status = 0;
-	}
-	else // Total is not greater than zero
-	{
-		// Car has been zeroed, save not ok
-
-		// In the exceptional circumstance that
-		// a car could have this result genuinely, 
-		// there would be no consequences to not 
-		// saving its data anyway (as there is no 
-		// relevant data to save).
-
-		// Status remains 1
-	}
+	// If there is no value at this offset, the save file is invalid
+	bool status = (!((bool)(injector::ReadMemory<uint64_t>(carSaveBase + 0x10))));
 
 #ifdef _DEBUG
 	status ? writeLog("verifyCarData validation failed.") : writeLog("verifyCarData validation success.");
@@ -2409,7 +2375,7 @@ static int loadCarData()
 	loadCustomRegion();
 
 	// If the force full tune switch is set
-	if (ToBool(config["Save"]["Force Full Tune"]))
+	if (ToBool(config["Tune"]["Force Full Tune"]))
 	{
 		// Set the car to be fully tuned / force neons
 		setCarTuneNeons();
@@ -2800,91 +2766,34 @@ static int loadStoryData()
 	}
 	else // No story file
 	{
-		// Feature is broken until I figure out how the story bitmask works better
-
-		// If a non-default custom meter is selected in the drop-down
-		if (strcmp(config["Story"]["Starting Story"].c_str(), "Default") != 0)
+		// If the start with 100 stories option is set
+		if (ToBool(config["Save"]["Start at 100 Stories"]))
 		{
-			// Start at 60 stories (end of mt4/5 story)
-			if (strcmp(config["Story"]["Starting Story"].c_str(), "60 Stories") == 0)
-			{
-				// Set played games to 60 (lossless win streak)
-				memset((void*)(saveStoryBase + 0xE8), 0x3C, 0x1);
 
-				// Set last played level to 59 (zero indexed, means level 60)
-				memset((void*)(saveStoryBase + 0xEC), 0x3B, 0x1);
+			// Set played games to 100 (lossless win streak)
+			memset((void*)(saveStoryBase + 0xE8), 0x64, 0x1);
 
-				// Set tuning points level to 60 (Doesn't matter afaik, but worth setting??)
-				memset((void*)(saveStoryBase + 0xF0), 0x3C, 0x1);
+			// Set last played level to 99 (zero indexed, means level 60)
+			memset((void*)(saveStoryBase + 0xEC), 0x63, 0x1);
 
-				// Set current story loop value (3 = up to 4th loop)
-				memset((void*)(saveStoryBase + 0xF8), 0x3, 0x1);
+			// Set tuning points level to 100 (Doesn't matter afaik, but worth setting??)
+			memset((void*)(saveStoryBase + 0xF0), 0x64, 0x1);
 
-				// Set completed stories count to 60 (Not sure if this matters)
-				memset((void*)(saveStoryBase + 0xFC), 0x3C, 0x1);
+			// Set current story loop value (5 = 2nd story loop)
+			memset((void*)(saveStoryBase + 0xF8), 0x5, 0x1);
 
-				// Set the consecutive wins value to 60 (Unbroken win streak)
-				memset((void*)(saveStoryBase + 0x108), 0x3C, 0x1);
+			// Set completed stories count to 100 (Not sure if this matters)
+			memset((void*)(saveStoryBase + 0xFC), 0x64, 0x1);
 
-				// Locked Chapters Bitmask
-				uint8_t lockedBits[0x4] = { 0xF0, 0xFF, 0x0F, 0x00 };
-				memcpy((void*)(saveStoryBase + 0x118), (void*)lockedBits, 0x4);
-			}
-			
-			// Start at 80 stories (fully tuned car)
-			else if (strcmp(config["Story"]["Starting Story"].c_str(), "80 Stories") == 0)
-			{
-				// Set played games to 60 (lossless win streak)
-				memset((void*)(saveStoryBase + 0xE8), 0x50, 0x1);
+			// Set the consecutive wins value to 100 (Unbroken win streak)
+			memset((void*)(saveStoryBase + 0x108), 0x64, 0x1);
 
-				// Set last played level to 59 (zero indexed, means level 60)
-				memset((void*)(saveStoryBase + 0xEC), 0x4F, 0x1);
+			// Set '100 stories completed' to true
+			memset((void*)(saveStoryBase + 0x10C), 0x1, 0x1);
 
-				// Set tuning points level to 60 (Doesn't matter afaik, but worth setting??)
-				memset((void*)(saveStoryBase + 0xF0), 0x50, 0x1);
-
-				// Set current story loop value (4 = up to 5th loop)
-				memset((void*)(saveStoryBase + 0xF8), 0x4, 0x1);
-
-				// Set completed stories count to 60 (Not sure if this matters)
-				memset((void*)(saveStoryBase + 0xFC), 0x50, 0x1);
-
-				// Set the consecutive wins value to 60 (Unbroken win streak)
-				memset((void*)(saveStoryBase + 0x108), 0x50, 0x1);
-
-				// Locked Chapters Bitmask
-				uint8_t lockedBits[0x4] = { 0xF0, 0xFF, 0x0F, 0x00 };
-				memcpy((void*)(saveStoryBase + 0x118), (void*)lockedBits, 0x4);
-			}
-
-			// Start at 100 stories (start of loop 2)
-			else if (strcmp(config["Story"]["Starting Story"].c_str(), "100 Stories (Second Loop)") == 0)
-			{
-				// Set played games to 100 (lossless win streak)
-				memset((void*)(saveStoryBase + 0xE8), 0x64, 0x1);
-
-				// Set last played level to 99 (zero indexed, means level 60)
-				memset((void*)(saveStoryBase + 0xEC), 0x63, 0x1);
-
-				// Set tuning points level to 100 (Doesn't matter afaik, but worth setting??)
-				memset((void*)(saveStoryBase + 0xF0), 0x64, 0x1);
-
-				// Set current story loop value (5 = 2nd story loop)
-				memset((void*)(saveStoryBase + 0xF8), 0x5, 0x1);
-
-				// Set completed stories count to 100 (Not sure if this matters)
-				memset((void*)(saveStoryBase + 0xFC), 0x64, 0x1);
-
-				// Set the consecutive wins value to 100 (Unbroken win streak)
-				memset((void*)(saveStoryBase + 0x108), 0x64, 0x1);
-
-				// Set '100 stories completed' to true
-				memset((void*)(saveStoryBase + 0x10C), 0x1, 0x1);
-
-				// Chapter 5 locked, Chapters 10, 15 locked, Chapter 20 locked
-				uint8_t lockedBits[0x4] = { 0x10, 0x42, 0x08, 0x0 };
-				memcpy((void*)(saveStoryBase + 0x118), (void*)lockedBits, 0x4);
-			}
+			// Chapter 5 locked, Chapters 10, 15 locked, Chapter 20 locked
+			uint8_t lockedBits[0x4] = { 0x10, 0x42, 0x08, 0x0 };
+			memcpy((void*)(saveStoryBase + 0x118), (void*)lockedBits, 0x4);
 		}
 	}
 
@@ -3153,11 +3062,15 @@ static int loadGameData()
 	// Generate path to the time attack csv file
 	sprintf(taCsvPath, "%s\\%s", profilePath, TA_CSV_FILENAME);
 
-	// If the time attack csv file exists
-	if (FileExists(taCsvPath))
+	// If the time attack thread has not been started
+	// and the time attack file exists
+	if ((!taThread) && FileExists(taCsvPath))
 	{
 		// Start the time attack / versus monitor thread
 		CreateThread(0, 0, watchTimeAttack, 0, 0, 0);
+
+		// TA thread has been started
+		taThread = true;
 	}
 
 #ifdef _DEBUG
@@ -3355,6 +3268,21 @@ static InitFunction Wmmt6Func([]()
 		writeLog("Call to init function ...");
 #endif
 
+	// Custom Name Stuff
+
+	// Get the custom name specified in the  config file
+	std::string tempName = config["General"]["CustomName"];
+
+	// If a custom name is set
+	if (!tempName.empty())
+	{
+		// Zero out the custom name variable
+		memset(customName, 0x0, 0xFF);
+
+		// Copy the custom name to the custom name block
+		strcpy(customName, tempName.c_str());
+	}
+
 	// folder for path redirections
 	CreateDirectoryA(".\\TP", nullptr);
 
@@ -3422,28 +3350,6 @@ static InitFunction Wmmt6Func([]()
 	{
 		safeJMP(hook::get_pattern("0F B6 41 05 2C 30 3C 09 77 04 0F BE C0 C3 83 C8 FF C3"), ReturnTrue);
 	}
-	else // Terminal mode is off
-	{
-		// If the bypass terminal check switch is set
-		if (ToBool(config["General"]["BypassTerminalCheck"]))
-		{
-			// Patches to bypass terminal check (No multiplayer!)
-
-			injector::WriteMemory<WORD>(imageBase + 0x6A0C87, 0x00D1, true);
-			injector::WriteMemory<BYTE>(imageBase + 0x20B88A, 0x90, true);
-			injector::WriteMemory<BYTE>(imageBase + 0x20B88B, 0x90, true);
-			injector::WriteMemory<BYTE>(imageBase + 0x20B89B, 0x90, true);
-			injector::WriteMemory<BYTE>(imageBase + 0x20B89C, 0x90, true);
-			injector::WriteMemory<BYTE>(imageBase + 0x20B8A1, 0x90, true);
-			injector::WriteMemory<BYTE>(imageBase + 0x20B8A2, 0x90, true);
-		}
-
-		// Terminal emulator doesn't work for this game lol
-		// if (ToBool(config["General"]["TerminalEmulator"]))
-		// {
-		// 	CreateThread(0, 0, spamMulticast, 0, 0, 0);
-		// }
-	}
 
 	// Enable all print
 	injector::WriteMemory<BYTE>(imageBase + 0x8B6B23, 0xEB, true);
@@ -3500,50 +3406,77 @@ static InitFunction Wmmt6Func([]()
 	injector::WriteMemoryRaw(imageBase + 0x13652B8, "TP", 2, true);
 	injector::WriteMemoryRaw(imageBase + 0x1365AC8, "TP", 2, true);
 
-	ForceFullTune = (ToBool(config["Tune"]["Force Full Tune"]));
-	ForceNeon = (ToBool(config["Tune"]["Force Neon"]));
 
-	if (ForceNeon)
+	// Check for vanilla mode
+	bool vanillaMode = ToBool(config["General"]["Vanilla Mode (No Patches)"]);
+
+	// Vanilla mode is set
+	if (!vanillaMode)
 	{
-		if (strcmp(config["Tune"]["Select Neon"].c_str(), "Green") == 0)
-			NeonColour = 0x01;
-		if (strcmp(config["Tune"]["Select Neon"].c_str(), "Blue") == 0)
-			NeonColour = 0x02;
-		if (strcmp(config["Tune"]["Select Neon"].c_str(), "Red") == 0)
-			NeonColour = 0x03;
-		if (strcmp(config["Tune"]["Select Neon"].c_str(), "Yellow") == 0)
-			NeonColour = 0x04;
-		if (strcmp(config["Tune"]["Select Neon"].c_str(), "Purple") == 0)
-			NeonColour = 0x05;
-		if (strcmp(config["Tune"]["Select Neon"].c_str(), "Green Pattern") == 0)
-			NeonColour = 0x06;
-		if (strcmp(config["Tune"]["Select Neon"].c_str(), "Blue Pattern") == 0)
-			NeonColour = 0x07;
-		if (strcmp(config["Tune"]["Select Neon"].c_str(), "Red Pattern") == 0)
-			NeonColour = 0x08;
-		if (strcmp(config["Tune"]["Select Neon"].c_str(), "Yellow Pattern") == 0)
-			NeonColour = 0x09;
-		if (strcmp(config["Tune"]["Select Neon"].c_str(), "Purple Pattern") == 0)
-			NeonColour = 0x0A;
+		// Force full tune switch
+		ForceFullTune = (ToBool(config["Tune"]["Force Full Tune"]));
+
+		// Force neon switch
+		ForceNeon = (ToBool(config["Tune"]["Force Neon"]));
+
+		// If force neon is set
+		if (ForceNeon)
+		{
+			// Get the custom neons colour
+			if (strcmp(config["Tune"]["Select Neon"].c_str(), "Green") == 0)
+				NeonColour = 0x01;
+			if (strcmp(config["Tune"]["Select Neon"].c_str(), "Blue") == 0)
+				NeonColour = 0x02;
+			if (strcmp(config["Tune"]["Select Neon"].c_str(), "Red") == 0)
+				NeonColour = 0x03;
+			if (strcmp(config["Tune"]["Select Neon"].c_str(), "Yellow") == 0)
+				NeonColour = 0x04;
+			if (strcmp(config["Tune"]["Select Neon"].c_str(), "Purple") == 0)
+				NeonColour = 0x05;
+			if (strcmp(config["Tune"]["Select Neon"].c_str(), "Green Pattern") == 0)
+				NeonColour = 0x06;
+			if (strcmp(config["Tune"]["Select Neon"].c_str(), "Blue Pattern") == 0)
+				NeonColour = 0x07;
+			if (strcmp(config["Tune"]["Select Neon"].c_str(), "Red Pattern") == 0)
+				NeonColour = 0x08;
+			if (strcmp(config["Tune"]["Select Neon"].c_str(), "Yellow Pattern") == 0)
+				NeonColour = 0x09;
+			if (strcmp(config["Tune"]["Select Neon"].c_str(), "Purple Pattern") == 0)
+				NeonColour = 0x0A;
+		}
+
+		// Load car and save data at the same time
+		safeJMP(imageBase + 0x6C8818, loadGame);
+
+		// Save progress trigger
+		injector::WriteMemory<WORD>(imageBase + 0x655154, 0xB848, true);
+		injector::WriteMemory<uintptr_t>(imageBase + 0x655154 + 2, (uintptr_t)SaveOk, true);
+		injector::WriteMemory<DWORD>(imageBase + 0x655154 + 0xA, 0x9090D0FF, true);
+
+		// Try save later!
+		injector::MakeNOP(imageBase + 0x399A56, 0x12);
+		injector::WriteMemory<WORD>(imageBase + 0x399A56, 0xB848, true);
+		injector::WriteMemory<uintptr_t>(imageBase + 0x399A56 + 2, (uintptr_t)SaveGameData, true);
+		injector::WriteMemory<DWORD>(imageBase + 0x399A60, 0x3348D0FF, true);
+		injector::WriteMemory<WORD>(imageBase + 0x399A60 + 4, 0x90C0, true);
+
+		// If the bypass terminal check switch is set
+		if ((!isTerminal) && ToBool(config["General"]["BypassTerminalCheck"]))
+		{
+			// Patches to bypass terminal check (No multiplayer!)
+
+			injector::WriteMemory<WORD>(imageBase + 0x6A0C87, 0x00D1, true);
+			injector::WriteMemory<BYTE>(imageBase + 0x20B88A, 0x90, true);
+			injector::WriteMemory<BYTE>(imageBase + 0x20B88B, 0x90, true);
+			injector::WriteMemory<BYTE>(imageBase + 0x20B89B, 0x90, true);
+			injector::WriteMemory<BYTE>(imageBase + 0x20B89C, 0x90, true);
+			injector::WriteMemory<BYTE>(imageBase + 0x20B8A1, 0x90, true);
+			injector::WriteMemory<BYTE>(imageBase + 0x20B8A2, 0x90, true);
+		}
 	}
 
 	// Fix dongle error (can be triggered by various USB hubs, dongles
 	injector::MakeNOP(imageBase + 0x8C140F, 2, true);
-
-	// Load car and save data at the same time
-	safeJMP(imageBase + 0x6C8818, loadGame);
-
-	// Save progress trigger
-	injector::WriteMemory<WORD>(imageBase + 0x655154, 0xB848, true);
-	injector::WriteMemory<uintptr_t>(imageBase + 0x655154 + 2, (uintptr_t)SaveOk, true);
-	injector::WriteMemory<DWORD>(imageBase + 0x655154 + 0xA, 0x9090D0FF, true);
-
-	// Try save later!
-	injector::MakeNOP(imageBase + 0x399A56, 0x12);
-	injector::WriteMemory<WORD>(imageBase + 0x399A56, 0xB848, true);
-	injector::WriteMemory<uintptr_t>(imageBase + 0x399A56 + 2, (uintptr_t)SaveGameData, true);
-	injector::WriteMemory<DWORD>(imageBase + 0x399A60, 0x3348D0FF, true);
-	injector::WriteMemory<WORD>(imageBase + 0x399A60 + 4, 0x90C0, true);
 
 	MH_EnableHook(MH_ALL_HOOKS);
 

@@ -187,151 +187,6 @@ uint8_t dxpterminalPackage6_Coin[139] = {
 	0x00, 0x28, 0x00, 0xBD, 0x07, 0xCF, 0xDC
 };
 
-//Event mode 2P
-uint8_t dxpterminalPackage1_Event4P[79] = {
-	0x01, 0x04, 0x44, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
-	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
-	0x08, 0xd1, 0x0b, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
-	0x39, 0x30, 0x30, 0x30, 0x32, 0x18, 0x00, 0x30, 0x00, 0x4a, 0x08, 0x08,
-	0x03, 0x10, 0x01, 0x18, 0x00, 0x20, 0x00, 0x52, 0x0b, 0x08, 0x64, 0x10,
-	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0xc1, 0x96, 0xc9, 0x2e
-};
-
-uint8_t dxpterminalPackage2_Event4P[139] = {
-	0x01, 0x04, 0x80, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
-	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
-	0x08, 0xd2, 0x0b, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
-	0x39, 0x30, 0x30, 0x30, 0x32, 0x18, 0x00, 0x30, 0x00, 0x42, 0x3a, 0x08,
-	0x01, 0x10, 0x03, 0x18, 0x02, 0x20, 0x02, 0x28, 0x04, 0x30, 0x01, 0x38,
-	0x01, 0x40, 0x01, 0x48, 0x00, 0x50, 0x02, 0x58, 0x60, 0x60, 0x60, 0x68,
-	0x60, 0x70, 0x60, 0x78, 0x60, 0x80, 0x01, 0x60, 0x88, 0x01, 0x60, 0x90,
-	0x01, 0x60, 0x98, 0x01, 0x00, 0xa0, 0x01, 0xd8, 0xc3, 0xd6, 0xe1, 0x05,
-	0xa8, 0x01, 0x04, 0xb0, 0x01, 0x24, 0xb8, 0x01, 0x00, 0x4a, 0x08, 0x08,
-	0x03, 0x10, 0x01, 0x18, 0x00, 0x20, 0x00, 0x52, 0x0b, 0x08, 0x64, 0x10,
-	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0x91, 0x74, 0xca, 0x1e
-
-};
-
-uint8_t dxpterminalPackage3_Event4P[79] = {
-	0x01, 0x04, 0x44, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
-	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
-	0x08, 0x8d, 0x0c, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
-	0x39, 0x30, 0x30, 0x30, 0x32, 0x18, 0x00, 0x30, 0x00, 0x4a, 0x08, 0x08,
-	0x03, 0x10, 0x01, 0x18, 0x00, 0x20, 0x00, 0x52, 0x0b, 0x08, 0x64, 0x10,
-	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0x86, 0xb1, 0x27, 0x9e
-};
-
-uint8_t dxpterminalPackage4_Event4P[139] = {
-	0x01, 0x04, 0x80, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
-	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
-	0x08, 0x8e, 0x0c, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
-	0x39, 0x30, 0x30, 0x30, 0x32, 0x18, 0x00, 0x30, 0x00, 0x42, 0x3a, 0x08,
-	0x01, 0x10, 0x03, 0x18, 0x02, 0x20, 0x02, 0x28, 0x04, 0x30, 0x01, 0x38,
-	0x01, 0x40, 0x01, 0x48, 0x00, 0x50, 0x02, 0x58, 0x60, 0x60, 0x60, 0x68,
-	0x60, 0x70, 0x60, 0x78, 0x60, 0x80, 0x01, 0x60, 0x88, 0x01, 0x60, 0x90,
-	0x01, 0x60, 0x98, 0x01, 0x00, 0xa0, 0x01, 0xd9, 0xc3, 0xd6, 0xe1, 0x05,
-	0xa8, 0x01, 0x04, 0xb0, 0x01, 0x24, 0xb8, 0x01, 0x00, 0x4a, 0x08, 0x08,
-	0x03, 0x10, 0x01, 0x18, 0x00, 0x20, 0x00, 0x52, 0x0b, 0x08, 0x64, 0x10,
-	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0xc2, 0x11, 0x2a, 0x66
-
-};
-
-uint8_t dxpterminalPackage5_Event4P[79] = {
-	0x01, 0x04, 0x44, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
-	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
-	0x08, 0xc9, 0x0c, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
-	0x39, 0x30, 0x30, 0x30, 0x32, 0x18, 0x00, 0x30, 0x00, 0x4a, 0x08, 0x08,
-	0x03, 0x10, 0x01, 0x18, 0x00, 0x20, 0x00, 0x52, 0x0b, 0x08, 0x64, 0x10,
-	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0x5d, 0x49, 0x01, 0x1e
-};
-
-uint8_t dxpterminalPackage6_Event4P[139] = {
-	0x01, 0x04, 0x80, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
-	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
-	0x08, 0xca, 0x0c, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
-	0x39, 0x30, 0x30, 0x30, 0x32, 0x18, 0x00, 0x30, 0x00, 0x42, 0x3a, 0x08,
-	0x01, 0x10, 0x03, 0x18, 0x02, 0x20, 0x02, 0x28, 0x04, 0x30, 0x01, 0x38,
-	0x01, 0x40, 0x01, 0x48, 0x00, 0x50, 0x02, 0x58, 0x60, 0x60, 0x60, 0x68,
-	0x60, 0x70, 0x60, 0x78, 0x60, 0x80, 0x01, 0x60, 0x88, 0x01, 0x60, 0x90,
-	0x01, 0x60, 0x98, 0x01, 0x00, 0xa0, 0x01, 0xda, 0xc3, 0xd6, 0xe1, 0x05,
-	0xa8, 0x01, 0x04, 0xb0, 0x01, 0x24, 0xb8, 0x01, 0x00, 0x4a, 0x08, 0x08,
-	0x03, 0x10, 0x01, 0x18, 0x00, 0x20, 0x00, 0x52, 0x0b, 0x08, 0x64, 0x10,
-	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0xd4, 0x80, 0x16, 0xc2
-};
-
-
-//Event mode 2P
-uint8_t dxpterminalPackage1_Event2P[79] = {
-	0x01, 0x04, 0x44, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
-	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
-	0x08, 0xfe, 0x0e, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
-	0x39, 0x30, 0x30, 0x30, 0x32, 0x18, 0x00, 0x30, 0x00, 0x4a, 0x08, 0x08,
-	0x03, 0x10, 0x01, 0x18, 0x00, 0x20, 0x00, 0x52, 0x0b, 0x08, 0x64, 0x10,
-	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0xaf, 0xa1, 0x42, 0x3d
-};
-
-uint8_t dxpterminalPackage2_Event2P[139] = {
-	0x01, 0x04, 0x80, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
-	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
-	0x08, 0xff, 0x0e, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
-	0x39, 0x30, 0x30, 0x30, 0x32, 0x18, 0x00, 0x30, 0x00, 0x42, 0x3a, 0x08,
-	0x01, 0x10, 0x03, 0x18, 0x02, 0x20, 0x02, 0x28, 0x04, 0x30, 0x01, 0x38,
-	0x01, 0x40, 0x02, 0x48, 0x00, 0x50, 0x02, 0x58, 0x60, 0x60, 0x60, 0x68,
-	0x60, 0x70, 0x60, 0x78, 0x60, 0x80, 0x01, 0x60, 0x88, 0x01, 0x60, 0x90,
-	0x01, 0x60, 0x98, 0x01, 0x00, 0xa0, 0x01, 0xa7, 0xc2, 0xa5, 0xe1, 0x05,
-	0xa8, 0x01, 0x02, 0xb0, 0x01, 0x24, 0xb8, 0x01, 0x00, 0x4a, 0x08, 0x08,
-	0x03, 0x10, 0x01, 0x18, 0x00, 0x20, 0x00, 0x52, 0x0b, 0x08, 0x64, 0x10,
-	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0xe8, 0x94, 0x41, 0x46
-
-};
-
-uint8_t dxpterminalPackage3_Event2P[79] = {
-	0x01, 0x04, 0x44, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
-	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
-	0x08, 0x80, 0x0f, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
-	0x39, 0x30, 0x30, 0x30, 0x32, 0x18, 0x00, 0x30, 0x00, 0x4a, 0x08, 0x08,
-	0x03, 0x10, 0x01, 0x18, 0x00, 0x20, 0x00, 0x52, 0x0b, 0x08, 0x64, 0x10,
-	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0xa3, 0x94, 0x12, 0x9b
-};
-
-uint8_t dxpterminalPackage4_Event2P[139] = {
-	0x01, 0x04, 0x80, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
-	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
-	0x08, 0x8d, 0x0f, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
-	0x39, 0x30, 0x30, 0x30, 0x32, 0x18, 0x00, 0x30, 0x00, 0x42, 0x3a, 0x08,
-	0x01, 0x10, 0x03, 0x18, 0x02, 0x20, 0x02, 0x28, 0x04, 0x30, 0x01, 0x38,
-	0x01, 0x40, 0x02, 0x48, 0x00, 0x50, 0x02, 0x58, 0x60, 0x60, 0x60, 0x68,
-	0x60, 0x70, 0x60, 0x78, 0x60, 0x80, 0x01, 0x60, 0x88, 0x01, 0x60, 0x90,
-	0x01, 0x60, 0x98, 0x01, 0x00, 0xa0, 0x01, 0xa8, 0xc2, 0xa5, 0xe1, 0x05,
-	0xa8, 0x01, 0x02, 0xb0, 0x01, 0x24, 0xb8, 0x01, 0x00, 0x4a, 0x08, 0x08,
-	0x03, 0x10, 0x01, 0x18, 0x00, 0x20, 0x00, 0x52, 0x0b, 0x08, 0x64, 0x10,
-	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0x8b, 0x02, 0xdf, 0xad
-
-};
-
-uint8_t dxpterminalPackage5_Event2P[79] = {
-	0x01, 0x04, 0x44, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
-	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
-	0x08, 0x8e, 0x0f, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
-	0x39, 0x30, 0x30, 0x30, 0x32, 0x18, 0x00, 0x30, 0x00, 0x4a, 0x08, 0x08,
-	0x03, 0x10, 0x01, 0x18, 0x00, 0x20, 0x00, 0x52, 0x0b, 0x08, 0x64, 0x10,
-	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0xa3, 0xc2, 0x27, 0x9c
-};
-
-uint8_t dxpterminalPackage6_Event2P[139] = {
-	0x01, 0x04, 0x80, 0x00, 0x12, 0x0e, 0x0a, 0x00, 0x10, 0x04, 0x18, 0x00,
-	0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x38, 0x00, 0x1a, 0x00, 0x2a, 0x13,
-	0x08, 0xf0, 0x0e, 0x12, 0x0c, 0x32, 0x37, 0x32, 0x32, 0x31, 0x31, 0x39,
-	0x39, 0x30, 0x30, 0x30, 0x32, 0x18, 0x00, 0x30, 0x00, 0x42, 0x3a, 0x08,
-	0x01, 0x10, 0x03, 0x18, 0x02, 0x20, 0x02, 0x28, 0x04, 0x30, 0x01, 0x38,
-	0x01, 0x40, 0x02, 0x48, 0x00, 0x50, 0x02, 0x58, 0x60, 0x60, 0x60, 0x68,
-	0x60, 0x70, 0x60, 0x78, 0x60, 0x80, 0x01, 0x60, 0x88, 0x01, 0x60, 0x90,
-	0x01, 0x60, 0x98, 0x01, 0x00, 0xa0, 0x01, 0xa6, 0xc2, 0xa5, 0xe1, 0x05,
-	0xa8, 0x01, 0x02, 0xb0, 0x01, 0x24, 0xb8, 0x01, 0x00, 0x4a, 0x08, 0x08,
-	0x03, 0x10, 0x01, 0x18, 0x00, 0x20, 0x00, 0x52, 0x0b, 0x08, 0x64, 0x10,
-	0xde, 0x0f, 0x18, 0x05, 0x20, 0x00, 0x28, 0x00, 0x97, 0xd5, 0x79, 0xa6
-};
-
 #pragma endregion
 
 #pragma region constants
@@ -483,16 +338,17 @@ static char customName[PROFILE_LENGTH];
 
 // *** Boolean Variables ***
 
-// Sets if saving is allowed or not
-static bool saveOk = false;
-
 // Terminal emulator settings
 static bool isFreePlay;
-static bool isEventMode2P;
-static bool isEventMode4P;
 
 // Sets if loading is allowed
 static bool loadOk = false;
+
+// Sets if saving is allowed or not
+static bool saveOk = false;
+
+// Sets if TA thread is running or not
+static bool taThread = false;
 
 // *** Misc. Variables ***
 
@@ -1196,14 +1052,17 @@ static int setFullTune()
 
 	// Get the memory addresses for the car base save, power and handling values
 	auto carSaveBase = (uintptr_t*)(*(uintptr_t*)(imageBase + SAVE_OFFSET) + CAR_OFFSET);
-	auto powerAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase)+0xAC); // Power offset
-	auto handleAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase)+0xB8); // Handling offset
+	
+	auto powerAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase) + 0xAC); // Power offset
+	auto handleAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase) + 0xB8); // Handling offset
+	auto rankAddress = (uintptr_t*)(*(uintptr_t*)(carSaveBase) + 0xBC); // Ranking offset
 
 	// Dereference the power value from the memory address
 	auto powerValue = injector::ReadMemory<uint8_t>(powerAddress, true);
 	auto handleValue = injector::ReadMemory<uint8_t>(handleAddress, true);
+	auto rankValue = injector::ReadMemory<uint8_t>(rankAddress, true);
 
-	// Update code (Default not updated)
+	// Success status (default: fail)
 	bool update = 1;
 
 	// If the power and handling values do not add up to fully tuned
@@ -1212,6 +1071,13 @@ static int setFullTune()
 		// Car is not fully tuned, force it to the default full tune
 		injector::WriteMemory<uint8_t>(powerAddress, 0x10, true);
 		injector::WriteMemory<uint8_t>(handleAddress, 0x10, true);
+
+		// Rank is less than C4
+		if (rankValue < 0x07)
+		{
+			// Set the rank to 0x07 (C4)
+			injector::WriteMemory<uint8_t>(rankAddress, 0x07, true);
+		}
 
 		// Success status
 		update = 0;
@@ -1377,9 +1243,6 @@ static int loadCustomSticker()
 				// Write the string end line characters to the second row of the pointer
 				memcpy((void*)(stickerPtr + 0x10), stringTerminator, STICKER_LENGTH);
 
-				// Close the file
-				fclose(file);
-
 				// Success
 				status = 0;
 			}
@@ -1388,6 +1251,9 @@ static int loadCustomSticker()
 				// Incorrect file size 
 				status = 2;
 			}
+
+			// Close the file
+			fclose(file);
 		}
 	}
 	else // No files exist
@@ -1824,9 +1690,6 @@ static int loadCustomGTWing()
 				// Memcpys for the gt wing data will go here :)
 				memcpy((void*)(gtWingPtr + 0x14), (void*)(gtWingData), GTWING_DATA_SIZE); // Entire data
 
-				// Close the file
-				fclose(file);
-
 				// Success
 				status = 0;
 			}
@@ -1835,6 +1698,9 @@ static int loadCustomGTWing()
 				// Incorrect file size
 				status = 2;
 			}
+
+			// Close the file
+			fclose(file);
 		}
 	}
 	else // No files exist
@@ -2023,9 +1889,6 @@ static int loadCustomMiniSticker()
 					memcpy((void*)(currentStickerPtr + 0x10), (void*)(miniStickerData + offset), 0x8);
 				}
 
-				// Close the file
-				fclose(file);
-
 				// Success
 				status = 0;
 			}
@@ -2034,6 +1897,9 @@ static int loadCustomMiniSticker()
 				// Incorrect file size
 				status = 2;
 			}
+
+			// Close the file
+			fclose(file);
 		}
 	}
 	else // File does not exist
@@ -2204,9 +2070,6 @@ static int loadCustomTitle()
 				// Write the new title to the string value
 				memcpy((void*)titlePtr, carTitle, TITLE_LENGTH);
 
-				// Close the file
-				fclose(file);
-
 				// Success
 				status = 0;
 			}
@@ -2215,6 +2078,9 @@ static int loadCustomTitle()
 				// Incorrect file size 
 				status = 2;
 			}
+
+			// Close the file
+			fclose(file);
 		}
 	}
 
@@ -2417,9 +2283,6 @@ static int loadCustomRegion()
 				// Write the new title to the string value
 				memcpy((void*)regionPtr, region, REGION_LENGTH);
 
-				// Close the file
-				fclose(file);
-
 				// Success
 				status = 0;
 			}
@@ -2428,6 +2291,9 @@ static int loadCustomRegion()
 				// Incorrect file size 
 				status = 2;
 			}
+
+			// Close the file
+			fclose(file);
 		}
 	}
 	else // No files exist
@@ -2465,11 +2331,6 @@ static int loadCustomRegion()
 #pragma region car_main
 
 // verifyCarData(void): Int
-// Compares the data in the loaded car data to the 
-// data which is to be saved, to ensure that the new data
-// has not been corrupted. This has been implemented as 
-// a fix for a bug which was overwriting save files with
-// junk data after entering the test menu during versus mode.
 static int verifyCarData()
 {
 #ifdef _DEBUG
@@ -2481,64 +2342,12 @@ static int verifyCarData()
 
 	// Address where car save data starts
 	uintptr_t carSaveBase = *(uintptr_t*)(savePtr + CAR_OFFSET);
-
-	// Array which stores the offsets which should
-	// be loaded and their purpose for car data.
-	uint8_t offsets[] = {
-
-		0x28, 0x2C, 0x30, 0x34, 
-		0x3C, 0x40, 0x44, 0x48, 
-		0x4C, 0x58, 0x5C, 0x60, 
-		0x64, 0x80, 0x84, 0x88, 
-		0x8C, 0x90, 0x94, 0x98, 
-		0x9C, 0xA0, 0xA4, 0xA8, 
-		0xAC, 0xB8, 0xBC, 0xC0, 
-		0xC4, 0xD0, 0xD4, 0xD8, 
-		0xDC, 0xF0, 0xF4, 0xF8
-	};
-
+	
 	// Function validation status (default: invalid)
-	bool status = 1;
+	dumpMemory("cardata.bin", carSaveBase, CAR_DATA_SIZE);
 
-	// Get the number of items in the offsets list
-	uint32_t count = sizeof(offsets) / sizeof(*offsets);
-
-	// Get the total value of the element(s)
-	// If this is greater than zero, the car will be saved
-	// If it is less than zero, it will not be saved
-	int total = 0;
-
-	// Loop over all of the offsets
-	for (int i = 0; i < count; i++)
-	{
-		// Get the offset from the list
-		uint8_t offset = offsets[i];
-
-		// Get the current value in memory for the offset
-		uint32_t value = injector::ReadMemory<uint32_t>(carSaveBase + offset);
-
-		// Add the value to the total
-		total += value;
-	}
-
-	// If the total is greater than zero
-	if (total > 0)
-	{
-		// Car has not been zeroed, save ok
-		status = 0;
-	}
-	else // Total is not greater than zero
-	{
-		// Car has been zeroed, save not ok
-
-		// In the exceptional circumstance that
-		// a car could have this result genuinely, 
-		// there would be no consequences to not 
-		// saving its data anyway (as there is no 
-		// relevant data to save).
-
-		// Status remains 1
-	}
+	// If there is no value at this offset, the save file is invalid
+	bool status = (!((bool)(injector::ReadMemory<uint64_t>(carSaveBase + 0x10))));
 
 #ifdef _DEBUG
 	status ? writeLog("verifyCarData validation failed.") : writeLog("verifyCarData validation success.");
@@ -2735,7 +2544,7 @@ static int loadCarData()
 	loadCustomMiniSticker();
 
 	// If the force full tune switch is set
-	if (ToBool(config["Save"]["Force Full Tune"]))
+	if (ToBool(config["Tune"]["Force Full Tune"]))
 	{
 		// Set the car to be fully tuned
 		setFullTune();
@@ -3511,11 +3320,15 @@ static int loadGameData()
 	// Generate path to the time attack csv file
 	sprintf(taCsvPath, "%s\\%s", profilePath, TA_CSV_FILENAME);
 
-	// If the time attack csv file exists
-	if (FileExists(taCsvPath))
+	// If the time attack thread has not been started
+	// and the time attack file exists
+	if ((!taThread) && FileExists(taCsvPath))
 	{
 		// Start the time attack / versus monitor thread
 		CreateThread(0, 0, watchTimeAttack, 0, 0, 0);
+
+		// TA thread has been started
+		taThread = true;
 	}
 
 	// Sleep for 30 seconds (Thanks Chery!)
@@ -3651,42 +3464,6 @@ static DWORD WINAPI spamMulticast(LPVOID)
 		sizeof(dxpterminalPackage6_Free),
 	};
 
-	const uint8_t* byteSequences_Event2P[] = {
-		dxpterminalPackage1_Event2P,
-		dxpterminalPackage2_Event2P,
-		dxpterminalPackage3_Event2P,
-		dxpterminalPackage4_Event2P,
-		dxpterminalPackage5_Event2P,
-		dxpterminalPackage6_Event2P,
-	};
-
-	const size_t byteSizes_Event2P[] = {
-		sizeof(dxpterminalPackage1_Event2P),
-		sizeof(dxpterminalPackage2_Event2P),
-		sizeof(dxpterminalPackage3_Event2P),
-		sizeof(dxpterminalPackage4_Event2P),
-		sizeof(dxpterminalPackage5_Event2P),
-		sizeof(dxpterminalPackage6_Event2P),
-	};
-
-	const uint8_t* byteSequences_Event4P[] = {
-		dxpterminalPackage1_Event4P,
-		dxpterminalPackage2_Event4P,
-		dxpterminalPackage3_Event4P,
-		dxpterminalPackage4_Event4P,
-		dxpterminalPackage5_Event4P,
-		dxpterminalPackage6_Event4P,
-	};
-
-	const size_t byteSizes_Event4P[] = {
-		sizeof(dxpterminalPackage1_Event4P),
-		sizeof(dxpterminalPackage2_Event4P),
-		sizeof(dxpterminalPackage3_Event4P),
-		sizeof(dxpterminalPackage4_Event4P),
-		sizeof(dxpterminalPackage5_Event4P),
-		sizeof(dxpterminalPackage6_Event4P),
-	};
-
 	const uint8_t* byteSequences_Coin[] = {
 		dxpterminalPackage1_Coin,
 		dxpterminalPackage2_Coin,
@@ -3710,41 +3487,25 @@ static DWORD WINAPI spamMulticast(LPVOID)
 	toAddr.sin_addr.s_addr = inet_addr("225.0.0.1");
 	toAddr.sin_port = htons(50765);
 
-
+	// Free play mode switch
 	isFreePlay = ToBool(config["General"]["FreePlay"]);
-	isEventMode2P = ToBool(config["TerminalEmuConfig"]["2P Event Mode"]);
-	isEventMode4P = ToBool(config["TerminalEmuConfig"]["4P Event Mode"]);
 
-
+	// Free play mode is set
 	if (isFreePlay)
 	{
-		if (isEventMode2P) {
-			while (true) for (int i = 0; i < _countof(byteSequences_Event2P); i++)
-			{
-				sendto(sock, (const char*)byteSequences_Event2P[i], byteSizes_Event2P[i], 0, (sockaddr*)&toAddr, sizeof(toAddr));
-				Sleep(8);
-			}
-		}
-		else if (isEventMode4P) {
-			while (true) for (int i = 0; i < _countof(byteSequences_Event4P); i++)
-			{
-				sendto(sock, (const char*)byteSequences_Event4P[i], byteSizes_Event4P[i], 0, (sockaddr*)&toAddr, sizeof(toAddr));
-				Sleep(8);
-			}
-		}
-		else {
-			while (true) for (int i = 0; i < _countof(byteSequences_Free); i++)
-			{
-				sendto(sock, (const char*)byteSequences_Free[i], byteSizes_Free[i], 0, (sockaddr*)&toAddr, sizeof(toAddr));
-				Sleep(8);
-			}
+		while (true) for (int i = 0; i < _countof(byteSequences_Free); i++)
+		{
+			sendto(sock, (const char*)byteSequences_Free[i], byteSizes_Free[i], 0, (sockaddr*)&toAddr, sizeof(toAddr));
+			Sleep(8);
 		}
 	}
-
-	while (true) for (int i = 0; i < _countof(byteSequences_Coin); i++)
+	else // Free play mode is not set
 	{
-		sendto(sock, (const char*)byteSequences_Coin[i], byteSizes_Coin[i], 0, (sockaddr*)&toAddr, sizeof(toAddr));
-		Sleep(8);
+		while (true) for (int i = 0; i < _countof(byteSequences_Coin); i++)
+		{
+			sendto(sock, (const char*)byteSequences_Coin[i], byteSizes_Coin[i], 0, (sockaddr*)&toAddr, sizeof(toAddr));
+			Sleep(8);
+		}
 	}
 
 #ifdef _DEBUG
@@ -3785,175 +3546,170 @@ static DWORD WINAPI spamCustomName(LPVOID)
 // maximum tune 5, including the starting 
 // of required subprocesses.
 static InitFunction Wmmt5Func([]()
-	{
+{
 #ifdef _DEBUG
-		writeLog("Game: Wangan Midnight Maximum Tune 5DX+");
-		writeLog("Call to init function ...");
+	writeLog("Game: Wangan Midnight Maximum Tune 5DX+");
+	writeLog("Call to init function ...");
 #endif
 
-		// Records if terminal mode is enabled
-		bool isTerminal = false;
+	// Custom Name Stuff
 
-		// If terminal mode is set in the general settings
-		if (ToBool(config["General"]["TerminalMode"]))
-		{
-			// Terminal mode is set
-			isTerminal = true;
-		}
+	// Get the custom name specified in the  config file
+	std::string tempName = config["General"]["CustomName"];
 
-		// Get the network adapter ip address from the general settings
-		std::string networkip = config["General"]["NetworkAdapterIP"];
+	// If a custom name is set
+	if (!tempName.empty())
+	{
+		// Zero out the custom name variable
+		memset(customName, 0x0, 0xFF);
 
-		// If the ip address is not blank
-		if (!networkip.empty())
-		{
-			// Overwrite the default ip address
-			ipaddr = networkip.c_str();
-		}
+		// Copy the custom name to the custom name block
+		strcpy(customName, tempName.c_str());
+	}
 
-		hookPort = "COM3";
-		imageBase = (uintptr_t)GetModuleHandleA(0);
+	// Records if terminal mode is enabled
+	bool isTerminal = false;
 
-		MH_Initialize();
+	// If terminal mode is set in the general settings
+	if (ToBool(config["General"]["TerminalMode"]))
+	{
+		// Terminal mode is set
+		isTerminal = true;
+	}
 
-		// Hook dongle funcs
-		MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_write", hook_hasp_write, NULL);
-		MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_read", hook_hasp_read, NULL);
-		MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_get_size", hook_hasp_get_size, NULL);
-		MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_decrypt", hook_hasp_decrypt, NULL);
-		MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_encrypt", hook_hasp_encrypt, NULL);
-		MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_logout", hook_hasp_logout, NULL);
-		MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_login", hook_hasp_login, NULL);
+	// Get the network adapter ip address from the general settings
+	std::string networkip = config["General"]["NetworkAdapterIP"];
 
-		generateDongleData(isTerminal);
+	// If the ip address is not blank
+	if (!networkip.empty())
+	{
+		// Overwrite the default ip address
+		ipaddr = networkip.c_str();
+	}
 
-		// Prevents game from setting time, thanks pockywitch!
-		MH_CreateHookApi(L"KERNEL32", "SetSystemTime", Hook_SetSystemTime, reinterpret_cast<LPVOID*>(&pSetSystemTime));
+	hookPort = "COM3";
+	imageBase = (uintptr_t)GetModuleHandleA(0);
 
-		// Patch some check TEMP DISABLE AS WELL OVER HERE
-		// 0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 E4 EB 03 41 B4 01
-		// FOUND ON 21, 10
-		// NOT WORKING 1
-		// 0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 ?? EB
-		// FOUND ON 1
-		//injector::WriteMemory<uint8_t>(imageBase + 0x6286EC, 0, true); 
-		injector::WriteMemory<uint8_t>(hook::get_pattern("85 C9 0F 94 C0 84 C0 0F 94 C0 84 C0 75 ? 40 32 F6 EB ?", 0x15), 0, true); //patches out dongle error2 (doomer)
+	MH_Initialize();
+
+	// Hook dongle funcs
+	MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_write", hook_hasp_write, NULL);
+	MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_read", hook_hasp_read, NULL);
+	MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_get_size", hook_hasp_get_size, NULL);
+	MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_decrypt", hook_hasp_decrypt, NULL);
+	MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_encrypt", hook_hasp_encrypt, NULL);
+	MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_logout", hook_hasp_logout, NULL);
+	MH_CreateHookApi(L"hasp_windows_x64_106482.dll", "hasp_login", hook_hasp_login, NULL);
+
+	generateDongleData(isTerminal);
+
+	// Prevents game from setting time, thanks pockywitch!
+	MH_CreateHookApi(L"KERNEL32", "SetSystemTime", Hook_SetSystemTime, reinterpret_cast<LPVOID*>(&pSetSystemTime));
+
+	// Patch some check TEMP DISABLE AS WELL OVER HERE
+	// 0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 E4 EB 03 41 B4 01
+	// FOUND ON 21, 10
+	// NOT WORKING 1
+	// 0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 ?? EB
+	// FOUND ON 1
+	//injector::WriteMemory<uint8_t>(imageBase + 0x6286EC, 0, true); 
+	injector::WriteMemory<uint8_t>(hook::get_pattern("85 C9 0F 94 C0 84 C0 0F 94 C0 84 C0 75 ? 40 32 F6 EB ?", 0x15), 0, true); //patches out dongle error2 (doomer)
+
+	// Patch some jnz
+	// 83 C0 FD 83 F8 01 0F 87 B4 00 00 00 83 BF D0 06 00 00 3C 73 29 48 8D 8D 60 06 00 00
+	// FOUND ON 21, 10
+	// NOT FOUND: 1
+	// 83 C0 FD 83 F8 01 0F 87 B4 00 00 00
+	// FOUND ON 1
+	// injector::MakeNOP(imageBase + 0x628AE0, 6);
+	// THIS injector::MakeNOP(hook::get_pattern("83 C0 FD 83 F8 01 0F 87 B4 00 00 00", 6), 6);
+	injector::MakeNOP(hook::get_pattern("83 C0 FD 83 F8 01 76 ? 49 8D ? ? ? ? 00 00"), 6);
+
+	// Patch some shit
+	// 83 FA 04 0F 8C 1E 01 00 00 4C 89 44 24 18 4C 89 4C 24 20
+	// FOUND ON 21, 10, 1
+	// NOT FOUND:
+	//injector::WriteMemory<uint8_t>(imageBase + 0x7B9882, 0, true);
+	//THIS injector::WriteMemory<uint8_t>(hook::get_pattern("83 FA 04 0F 8C 1E 01 00 00 4C 89 44 24 18 4C 89 4C 24 20", 2), 0, true);
+
+	// Skip weird camera init that stucks entire pc on certain brands. TESTED ONLY ON 05!!!!
+	if (ToBool(config["General"]["WhiteScreenFix"]))
+	{
+		injector::WriteMemory<DWORD>(hook::get_pattern("48 8B C4 55 57 41 54 41 55 41 56 48 8D 68 A1 48 81 EC 90 00 00 00 48 C7 45 D7 FE FF FF FF 48 89 58 08 48 89 70 18 45 33 F6 4C 89 75 DF 33 C0 48 89 45 E7", 0), 0x90C3C032, true);
+	}
+
+	// Patch some call
+	// 45 33 C0 BA 65 09 00 00 48 8D 4D B0 E8 ?? ?? ?? ?? 48 8B 08
+	// FOUND ON 21, 10, 1
+	{
+		// 199AE18 TIME OFFSET RVA temp disable ALL JNZ PATCH
+		auto location = hook::get_pattern<char>("41 3B C7 74 0E 48 8D 8F B8 00 00 00 BA F6 01 00 00 EB 6E 48 8D 8F A0 00 00 00");
 
 		// Patch some jnz
-		// 83 C0 FD 83 F8 01 0F 87 B4 00 00 00 83 BF D0 06 00 00 3C 73 29 48 8D 8D 60 06 00 00
-		// FOUND ON 21, 10
-		// NOT FOUND: 1
-		// 83 C0 FD 83 F8 01 0F 87 B4 00 00 00
-		// FOUND ON 1
-		//injector::MakeNOP(imageBase + 0x628AE0, 6);
-		//THIS injector::MakeNOP(hook::get_pattern("83 C0 FD 83 F8 01 0F 87 B4 00 00 00", 6), 6);
-		injector::MakeNOP(hook::get_pattern("83 C0 FD 83 F8 01 76 ? 49 8D ? ? ? ? 00 00"), 6);
-
-		// Patch some shit
-		// 83 FA 04 0F 8C 1E 01 00 00 4C 89 44 24 18 4C 89 4C 24 20
+		// 41 3B C7 74 0E 48 8D 8F B8 00 00 00 BA F6 01 00 00 EB 6E 48 8D 8F A0 00 00 00
 		// FOUND ON 21, 10, 1
-		// NOT FOUND:
-		//injector::WriteMemory<uint8_t>(imageBase + 0x7B9882, 0, true);
-		//THIS injector::WriteMemory<uint8_t>(hook::get_pattern("83 FA 04 0F 8C 1E 01 00 00 4C 89 44 24 18 4C 89 4C 24 20", 2), 0, true);
+		injector::WriteMemory<uint8_t>(location + 3, 0xEB, true); //patches content router (doomer)
 
-		// Skip weird camera init that stucks entire pc on certain brands. TESTED ONLY ON 05!!!!
-		if (ToBool(config["General"]["WhiteScreenFix"]))
-		{
-			injector::WriteMemory<DWORD>(hook::get_pattern("48 8B C4 55 57 41 54 41 55 41 56 48 8D 68 A1 48 81 EC 90 00 00 00 48 C7 45 D7 FE FF FF FF 48 89 58 08 48 89 70 18 45 33 F6 4C 89 75 DF 33 C0 48 89 45 E7", 0), 0x90C3C032, true);
-		}
+		// Skip some jnz
+		injector::MakeNOP(location + 0x22, 2); //patches ip addr error again (doomer)
 
-		// Patch some call
-		// 45 33 C0 BA 65 09 00 00 48 8D 4D B0 E8 ?? ?? ?? ?? 48 8B 08
+		// Skip some jnz
+		injector::MakeNOP(location + 0x33, 2); //patches ip aaddr error(doomer)
+	}
+
+	// Terminal mode is off
+	if (!isTerminal)
+	{
+		// Disregard terminal scanner stuff.
+		// 48 8B 18 48 3B D8 0F 84 88 00 00 00 39 7B 1C 74 60 80 7B 31 00 75 4F 48 8B 43 10 80 78 31 00
 		// FOUND ON 21, 10, 1
+		//injector::MakeNOP(imageBase + 0x91E1AE, 6);
+		//injector::MakeNOP(imageBase + 0x91E1B7, 2);
+		//injector::MakeNOP(imageBase + 0x91E1BD, 2);
 
-		{
-			// 199AE18 TIME OFFSET RVA temp disable ALL JNZ PATCH
-
-			auto location = hook::get_pattern<char>("41 3B C7 74 0E 48 8D 8F B8 00 00 00 BA F6 01 00 00 EB 6E 48 8D 8F A0 00 00 00");
-
-			// Patch some jnz
-			// 41 3B C7 74 0E 48 8D 8F B8 00 00 00 BA F6 01 00 00 EB 6E 48 8D 8F A0 00 00 00
-			// FOUND ON 21, 10, 1
-			injector::WriteMemory<uint8_t>(location + 3, 0xEB, true); //patches content router (doomer)
-
-			// Skip some jnz
-			injector::MakeNOP(location + 0x22, 2); //patches ip addr error again (doomer)
-
-			// Skip some jnz
-			injector::MakeNOP(location + 0x33, 2); //patches ip aaddr error(doomer)
-		}
-
-		// Terminal mode is off
-		if (!isTerminal)
-		{
-			// Disregard terminal scanner stuff.
-			// 48 8B 18 48 3B D8 0F 84 88 00 00 00 39 7B 1C 74 60 80 7B 31 00 75 4F 48 8B 43 10 80 78 31 00
-			// FOUND ON 21, 10, 1
-			//injector::MakeNOP(imageBase + 0x91E1AE, 6);
-			//injector::MakeNOP(imageBase + 0x91E1B7, 2);
-			//injector::MakeNOP(imageBase + 0x91E1BD, 2);
-
-			/*
-			auto location = hook::get_pattern<char>("48 8B 18 48 3B D8 0F 84 8B 00 00 00 0F 1F 80 00 00 00 00 39 73 1C 74 5C 80 7B 31 00");
-			// injector::MakeNOP(location + 6, 6); // 6
-			injector::MakeNOP(location + 0xF, 2); // 0xF
-			// injector::MakeNOP(location + 0x15, 2); // 0x15
-			*/
-
-			injector::MakeNOP(imageBase + 0x9F2BB3, 2);
-
-			// If terminal emulator is enabled
-			if (ToBool(config["General"]["TerminalEmulator"]))
-			{
-				// Start the multicast spam thread
-				CreateThread(0, 0, spamMulticast, 0, 0, 0);
-			}
-		}
 		/*
-		else
-		{
-			// Patch some func to 1
-			//
-			// FOUND ON 21, 10, 1
-			// NOT FOUND:
-			//safeJMP(imageBase + 0x7BE440, returnTrue);
-			//safeJMP(hook::get_pattern("0F B6 41 05 2C 30 3C 09 77 04 0F BE C0 C3 83 C8 FF C3"), returnTrue);
-			//safeJMP(imageBase + 0x89D420, returnTrue);
-
-			// Patch some func to 1
-			// 40 53 48 83 EC 20 48 83 39 00 48 8B D9 75 28 48 8D ?? ?? ?? ?? 00 48 8D ?? ?? ?? ?? 00 41 B8 ?? ?? 00 00 FF 15 ?? ?? ?? ?? 4C 8B 1B 41 0F B6 43 78
-			// FOUND ON 21, 10, 1
-			//safeJMP(imageBase + 0x7CF8D0, returnTrue);
-			//safeJMP(hook::get_pattern("40 53 48 83 EC 20 48 83 39 00 48 8B D9 75 11 48 8B 0D C2"), returnTrue);
-			//safeJMP(imageBase + 0x8B5190, returnTrue);
-		}
+		auto location = hook::get_pattern<char>("48 8B 18 48 3B D8 0F 84 8B 00 00 00 0F 1F 80 00 00 00 00 39 73 1C 74 5C 80 7B 31 00");
+		// injector::MakeNOP(location + 6, 6); // 6
+		injector::MakeNOP(location + 0xF, 2); // 0xF
+		// injector::MakeNOP(location + 0x15, 2); // 0x15
 		*/
 
-		auto chars = { 'F', 'G' };
+		injector::MakeNOP(imageBase + 0x9F2BB3, 2);
+	}
 
-		for (auto cha : chars)
+	auto chars = { 'F', 'G' };
+
+	for (auto cha : chars)
+	{
+		auto patterns = hook::pattern(va("%02X 3A 2F", cha));
+
+		if (patterns.size() > 0)
 		{
-			auto patterns = hook::pattern(va("%02X 3A 2F", cha));
-
-			if (patterns.size() > 0)
+			for (int i = 0; i < patterns.size(); i++)
 			{
-				for (int i = 0; i < patterns.size(); i++)
-				{
-					char* text = patterns.get(i).get<char>(0);
-					std::string text_str(text);
+				char* text = patterns.get(i).get<char>(0);
+				std::string text_str(text);
 
-					std::string to_replace = va("%c:/", cha);
-					std::string replace_with = va("./%c", cha);
+				std::string to_replace = va("%c:/", cha);
+				std::string replace_with = va("./%c", cha);
 
-					std::string replaced = text_str.replace(0, to_replace.length(), replace_with);
+				std::string replaced = text_str.replace(0, to_replace.length(), replace_with);
 
-					injector::WriteMemoryRaw(text, (char*)replaced.c_str(), replaced.length() + 1, true);
-				}
+				injector::WriteMemoryRaw(text, (char*)replaced.c_str(), replaced.length() + 1, true);
 			}
 		}
+	}
+	
+	// Enable all print
+	injector::MakeNOP(imageBase + 0x898BD3, 6);
 
-		// Enable all print
-		injector::MakeNOP(imageBase + 0x898BD3, 6);
+	// Check for vanilla mode
+	bool vanillaMode = ToBool(config["General"]["Vanilla Mode (No Patches)"]);
+
+	// Vanilla mode is set
+	if (!vanillaMode)
+	{
+		// Enable load / save hooks
 
 		// Load car and story data at once
 		safeJMP(imageBase + 0x72AB90, loadGame);
@@ -3970,10 +3726,18 @@ static InitFunction Wmmt5Func([]()
 		injector::WriteMemory<uintptr_t>(imageBase + 0x6B909A + 2, (uintptr_t)SaveOk, true);
 		injector::WriteMemory<DWORD>(imageBase + 0x6B90A4, 0x9090D0FF, true);
 
-		MH_EnableHook(MH_ALL_HOOKS);
+		// If we are not running as a terminal, and terminal emu is enabled
+		if ((!isTerminal) && ToBool(config["General"]["TerminalEmulator"]))
+		{
+			// Create the terminal emulator thread
+			CreateThread(0, 0, spamMulticast, 0, 0, 0);
+		}
+	}
+
+	MH_EnableHook(MH_ALL_HOOKS);
 
 #ifdef _DEBUG
-		writeLog("Init function done.");
+	writeLog("Init function done.");
 #endif
 }, GameID::WMMT5DXPlus);
 #endif
