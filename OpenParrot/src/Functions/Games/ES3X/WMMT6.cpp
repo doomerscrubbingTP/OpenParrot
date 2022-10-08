@@ -3473,6 +3473,12 @@ static InitFunction Wmmt6Func([]()
 			injector::WriteMemory<BYTE>(imageBase + 0x20B8A1, 0x90, true);
 			injector::WriteMemory<BYTE>(imageBase + 0x20B8A2, 0x90, true);
 		}
+		injector::WriteMemory<BYTE>(imageBase + 0xA36CAA, 0xEB, true); //content router patch
+		injector::MakeNOP(imageBase + 0x690876, 2, true); 
+		injector::MakeNOP(hook::get_pattern("74 ? 80 7B 31 00 75 ? 48 8B 43 10 80 78 31 00 75 1A 48 8B D8 48 8B 00 80 78 31 00 75 ? 48 8B D8"), 2);
+
+
+
 	}
 
 	// Fix dongle error (can be triggered by various USB hubs, dongles

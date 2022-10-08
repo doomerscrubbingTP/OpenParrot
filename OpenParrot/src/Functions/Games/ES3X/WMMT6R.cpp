@@ -513,7 +513,7 @@ static void GenerateDongleData(bool isTerminal)
 	hasp_buffer[0x2F] = 0x87;
 	if (isTerminal)
 	{
-		memcpy(hasp_buffer + 0xD00, "290811990002", 12); // not sure these are OK, since its from google lol.
+		memcpy(hasp_buffer + 0xD00, "280811401138", 12); // not sure these are OK, since its from google lol.
 		hasp_buffer[0xD3E] = GenerateChecksum(hasp_buffer, 0xD00, 62);
 		hasp_buffer[0xD3F] = hasp_buffer[0xD3E] ^ 0xFF;
 	}
@@ -644,9 +644,18 @@ static __int64 nbamUsbFinderInitialize()
 
 static __int64 __fastcall nbamUsbFinderGetSerialNumber(int a1, char* a2)
 {
-	static char* serial = "280813401138";
-	memcpy(a2, serial, strlen(serial));
-	return 0;
+	if (ToBool(config["General"]["TerminalMode"]))
+	{
+		static char* serial = "280811401138";
+		memcpy(a2, serial, strlen(serial));
+		return 0;
+	}
+	else
+	{
+		static char* serial = "280813401138";
+		memcpy(a2, serial, strlen(serial));
+		return 0;
+	}
 }
 static InitFunction Wmmt6RFunc([]()
 	{
@@ -716,10 +725,13 @@ static InitFunction Wmmt6RFunc([]()
 
 		if (isTerminal)
 		{
-			safeJMP(hook::get_pattern("0F B6 41 05 2C 30 3C 09 77 04 0F BE C0 C3 83 C8 FF C3"), ReturnTrue);
+			//safeJMP(hook::get_pattern("0F B6 41 05 2C 30 3C 09 77 04 0F BE C0 C3 83 C8 FF C3"), ReturnTrue);
+			injector::MakeNOP((imageBase + 0x710445), 5);
+			safeJMP(hook::get_pattern("8B 01 0F B6 40 78 C3 CC CC CC CC"), ReturnTrue);
 		}
 		else
 		{
+			/*
 			injector::WriteMemory<WORD>(imageBase + 0x718FA1, 0x00D2, true); // pls check
 			injector::WriteMemory<BYTE>(imageBase + 0x20EC3A, 0x90, true);
 			injector::WriteMemory<BYTE>(imageBase + 0x20EC3B, 0x90, true);
@@ -727,12 +739,16 @@ static InitFunction Wmmt6RFunc([]()
 			injector::WriteMemory<BYTE>(imageBase + 0x20EC4C, 0x90, true);
 			injector::WriteMemory<BYTE>(imageBase + 0x20EC51, 0x90, true);
 			injector::WriteMemory<BYTE>(imageBase + 0x20EC52, 0x90, true);
-
+			*/
 			// spam thread
 			if (ToBool(config["General"]["TerminalEmulator"]))
 			{
 				CreateThread(0, 0, SpamMulticast, 0, 0, 0);
 			}
+			injector::WriteMemory<BYTE>(imageBase + 0xB0EB4A, 0xEB, true); //content router patch
+			injector::MakeNOP(imageBase + 0x7084A6, 2, true);
+			injector::MakeNOP(hook::get_pattern("74 ? 80 7B 31 00 75 ? 48 8B 43 10 80 78 31 00 75 1A 48 8B D8 48 8B 00 80 78 31 00 75 ? 48 8B D8"), 2);
+
 		}
 
 		// Enable all print
